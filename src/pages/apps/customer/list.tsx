@@ -121,127 +121,127 @@ function ReactTable({ data, columns, modalToggler }: Props) {
   return (
     <MainCard content={false}>
       <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        sx={(theme) => ({
-          gap: 2,
-          justifyContent: 'space-between',
-          p: 3,
-          [theme.breakpoints.down('sm')]: { '& .MuiOutlinedInput-root, & .MuiFormControl-root': { width: '100%' } }
-        })}
+      direction={{ xs: 'column', sm: 'row' }}
+      sx={(theme) => ({
+        gap: 2,
+        justifyContent: 'space-between',
+        p: 3,
+        [theme.breakpoints.down('sm')]: { '& .MuiOutlinedInput-root, & .MuiFormControl-root': { width: '100%' } }
+      })}
       >
-        <DebouncedInput
-          value={globalFilter ?? ''}
-          onFilterChange={(value) => setGlobalFilter(String(value))}
-          placeholder={`Search ${data.length} records...`}
-        />
+      <DebouncedInput
+        value={globalFilter ?? ''}
+        onFilterChange={(value) => setGlobalFilter(String(value))}
+        placeholder={`Buscar en ${data.length} registros...`}
+      />
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2, alignItems: 'center' }}>
-          <Select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-            displayEmpty
-            inputProps={{ 'aria-label': 'Status Filter' }}
-          >
-            <MenuItem value="">All Status</MenuItem>
-            <MenuItem value={1}>Verified</MenuItem>
-            <MenuItem value={2}>Pending</MenuItem>
-            <MenuItem value={3}>Rejected</MenuItem>
-          </Select>
-          <SelectColumnSorting sortBy={sortBy.id} {...{ getState: table.getState, getAllColumns: table.getAllColumns, setSorting }} />
-          <Stack direction="row" sx={{ gap: 2, alignItems: 'center' }}>
-            <Button variant="contained" startIcon={<Add />} onClick={modalToggler} size="large">
-              Add Customer
-            </Button>
-            <CSVExport
-              {...{
-                data:
-                  table.getSelectedRowModel().flatRows.map((row) => row.original).length === 0
-                    ? data
-                    : table.getSelectedRowModel().flatRows.map((row) => row.original),
-                headers,
-                filename: 'customer-list.csv'
-              }}
-            />
-          </Stack>
+      <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2, alignItems: 'center' }}>
+        <Select
+        value={statusFilter}
+        onChange={(event) => setStatusFilter(event.target.value)}
+        displayEmpty
+        inputProps={{ 'aria-label': 'Filtro de estado' }}
+        >
+        <MenuItem value="">Todos los estados</MenuItem>
+        <MenuItem value={1}>Verificado</MenuItem>
+        <MenuItem value={2}>Pendiente</MenuItem>
+        <MenuItem value={3}>Rechazado</MenuItem>
+        </Select>
+        <SelectColumnSorting sortBy={sortBy.id} {...{ getState: table.getState, getAllColumns: table.getAllColumns, setSorting }} />
+        <Stack direction="row" sx={{ gap: 2, alignItems: 'center' }}>
+        <Button variant="contained" startIcon={<Add />} onClick={modalToggler} size="large">
+          Agregar cliente
+        </Button>
+        <CSVExport
+          {...{
+          data:
+            table.getSelectedRowModel().flatRows.map((row) => row.original).length === 0
+            ? data
+            : table.getSelectedRowModel().flatRows.map((row) => row.original),
+          headers,
+          filename: 'lista-clientes.csv'
+          }}
+        />
         </Stack>
       </Stack>
+      </Stack>
       <Stack>
-        <RowSelection selected={Object.keys(rowSelection).length} />
-        <TableContainer>
-          <Table>
-            <TableHead>
-              {table.getHeaderGroups().map((headerGroup: HeaderGroup<any>) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    if (header.column.columnDef.meta !== undefined && header.column.getCanSort()) {
-                      Object.assign(header.column.columnDef.meta, {
-                        className: header.column.columnDef.meta.className + ' cursor-pointer prevent-select'
-                      });
-                    }
+      <RowSelection selected={Object.keys(rowSelection).length} />
+      <TableContainer>
+        <Table>
+        <TableHead>
+          {table.getHeaderGroups().map((headerGroup: HeaderGroup<any>) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header) => {
+            if (header.column.columnDef.meta !== undefined && header.column.getCanSort()) {
+              Object.assign(header.column.columnDef.meta, {
+              className: header.column.columnDef.meta.className + ' cursor-pointer prevent-select'
+              });
+            }
 
-                    return (
-                      <TableCell
-                        key={header.id}
-                        {...header.column.columnDef.meta}
-                        onClick={header.column.getToggleSortingHandler()}
-                        {...(header.column.getCanSort() &&
-                          header.column.columnDef.meta === undefined && {
-                            className: 'cursor-pointer prevent-select'
-                          })}
-                      >
-                        {header.isPlaceholder ? null : (
-                          <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
-                            <Box>{flexRender(header.column.columnDef.header, header.getContext())}</Box>
-                            {header.column.getCanSort() && <HeaderSort column={header.column} />}
-                          </Stack>
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHead>
-            <TableBody>
-              {table.getRowModel().rows.map((row) => (
-                <Fragment key={row.id}>
-                  <TableRow>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} {...cell.column.columnDef.meta}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                  {row.getIsExpanded() && (
-                    <TableRow
-                      sx={(theme) => ({
-                        bgcolor: alpha(theme.palette.primary.lighter, 0.1),
-                        '&:hover': { bgcolor: `${alpha(theme.palette.primary.lighter, 0.1)} !important` },
-                        overflow: 'hidden'
-                      })}
-                    >
-                      <TableCell colSpan={row.getVisibleCells().length} sx={{ p: 2.5, overflow: 'hidden' }}>
-                        <CustomerView data={row.original} />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </Fragment>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <>
-          <Divider />
-          <Box sx={{ p: 2 }}>
-            <TablePagination
-              {...{
-                setPageSize: table.setPageSize,
-                setPageIndex: table.setPageIndex,
-                getState: table.getState,
-                getPageCount: table.getPageCount
-              }}
-            />
-          </Box>
-        </>
+            return (
+              <TableCell
+              key={header.id}
+              {...header.column.columnDef.meta}
+              onClick={header.column.getToggleSortingHandler()}
+              {...(header.column.getCanSort() &&
+                header.column.columnDef.meta === undefined && {
+                className: 'cursor-pointer prevent-select'
+                })}
+              >
+              {header.isPlaceholder ? null : (
+                <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
+                <Box>{flexRender(header.column.columnDef.header, header.getContext())}</Box>
+                {header.column.getCanSort() && <HeaderSort column={header.column} />}
+                </Stack>
+              )}
+              </TableCell>
+            );
+            })}
+          </TableRow>
+          ))}
+        </TableHead>
+        <TableBody>
+          {table.getRowModel().rows.map((row) => (
+          <Fragment key={row.id}>
+            <TableRow>
+            {row.getVisibleCells().map((cell) => (
+              <TableCell key={cell.id} {...cell.column.columnDef.meta}>
+              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
+            ))}
+            </TableRow>
+            {row.getIsExpanded() && (
+            <TableRow
+              sx={(theme) => ({
+              bgcolor: alpha(theme.palette.primary.lighter, 0.1),
+              '&:hover': { bgcolor: `${alpha(theme.palette.primary.lighter, 0.1)} !important` },
+              overflow: 'hidden'
+              })}
+            >
+              <TableCell colSpan={row.getVisibleCells().length} sx={{ p: 2.5, overflow: 'hidden' }}>
+              <CustomerView data={row.original} />
+              </TableCell>
+            </TableRow>
+            )}
+          </Fragment>
+          ))}
+        </TableBody>
+        </Table>
+      </TableContainer>
+      <>
+        <Divider />
+        <Box sx={{ p: 2 }}>
+        <TablePagination
+          {...{
+          setPageSize: table.setPageSize,
+          setPageIndex: table.setPageIndex,
+          getState: table.getState,
+          getPageCount: table.getPageCount
+          }}
+        />
+        </Box>
+      </>
       </Stack>
     </MainCard>
   );
@@ -293,15 +293,10 @@ export default function CustomerListPage() {
         }
       },
       {
-        header: 'Customer Name',
+        header: 'Nombre del Cliente',
         accessorKey: 'name',
         cell: ({ row, getValue }) => (
           <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center' }}>
-            <Avatar
-              alt="Avatar"
-              size="sm"
-              src={getImageUrl(`avatar-${!row.original.avatar ? 1 : row.original.avatar}.png`, ImagePath.USERS)}
-            />
             <Stack>
               <Typography variant="subtitle1">{getValue() as string}</Typography>
               <Typography sx={{ color: 'text.secondary' }}>{row.original.email as string}</Typography>
@@ -310,38 +305,38 @@ export default function CustomerListPage() {
         )
       },
       {
-        header: 'Contact',
+        header: 'Contacto',
         accessorKey: 'contact',
-        cell: ({ getValue }) => <PatternFormat displayType="text" format="+1 (###) ###-####" mask="_" defaultValue={getValue() as number} />
+        cell: ({ getValue }) => <PatternFormat displayType="text" format="+52 (##) ##-##-##-##" mask="_" defaultValue={getValue() as number} />
       },
       {
-        header: 'Age',
+        header: 'Edad',
         accessorKey: 'age',
         meta: {
           className: 'cell-right'
         }
       },
       {
-        header: 'Country',
+        header: 'País',
         accessorKey: 'country'
       },
       {
-        header: 'Status',
+        header: 'Estado',
         accessorKey: 'status',
         cell: (cell) => {
           switch (cell.getValue()) {
             case 3:
-              return <Chip color="error" label="Rejected" size="small" variant="light" />;
+              return <Chip color="error" label="Rechazado" size="small" variant="light" />;
             case 1:
-              return <Chip color="success" label="Verified" size="small" variant="light" />;
+              return <Chip color="success" label="Verificado" size="small" variant="light" />;
             case 2:
             default:
-              return <Chip color="info" label="Pending" size="small" variant="light" />;
+              return <Chip color="info" label="Pendiente" size="small" variant="light" />;
           }
         }
       },
       {
-        header: 'Actions',
+        header: 'Acciones',
         meta: {
           className: 'cell-center'
         },
@@ -357,12 +352,12 @@ export default function CustomerListPage() {
             );
           return (
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'center' }}>
-              <Tooltip title="View">
+              <Tooltip title="Ver">
                 <IconButton color="secondary" onClick={row.getToggleExpandedHandler()}>
                   {collapseIcon}
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Edit">
+              <Tooltip title="Editar">
                 <IconButton
                   color="primary"
                   sx={(theme) => ({ ':hover': { ...theme.applyStyles('dark', { color: 'text.primary' }) } })}
@@ -375,7 +370,7 @@ export default function CustomerListPage() {
                   <Edit />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Delete">
+              <Tooltip title="Eliminar">
                 <IconButton
                   sx={(theme) => ({ ':hover': { ...theme.applyStyles('dark', { color: 'text.primary' }) } })}
                   color="error"

@@ -37,7 +37,6 @@ import { useFormik, Form, FormikProvider } from 'formik';
 
 // project-imports
 import AlertCustomerDelete from './AlertCustomerDelete';
-import Avatar from 'components/@extended/Avatar';
 import IconButton from 'components/@extended/IconButton';
 import CircularWithPath from 'components/@extended/progress/CircularWithPath';
 
@@ -52,6 +51,7 @@ import { Camera, CloseCircle, Trash } from 'iconsax-react';
 // types
 import { SnackbarProps } from 'types/snackbar';
 import { CustomerList } from 'types/customer';
+import { m } from 'framer-motion';
 
 interface StatusProps {
   value: number;
@@ -105,20 +105,22 @@ const getInitialValues = (customer: CustomerList | null) => {
   const newCustomer = {
     firstName: '',
     lastName: '',
+    middleName: '',
     name: '',
     email: '',
+    phone: '',
     age: 18,
-    avatar: 1,
     gender: Gender.FEMALE,
+    supportSales: '',
+    classCustomer: '',
     role: '',
+    companyName: '',
     fatherName: '',
     orders: 0,
     progress: 50,
     status: 2,
     orderStatus: '',
     contact: '',
-    country: '',
-    location: '',
     about: '',
     skills: [],
     time: ['just now'],
@@ -138,20 +140,21 @@ const allStatus: StatusProps[] = [
   { value: 2, label: 'Pending' }
 ];
 
+
+const customerClassifications = [
+  { value: 'A', label: 'Platino (más de $500,000 en ventas)' },
+  { value: 'B', label: 'Oro (entre $250,000 y $500,000 en ventas)' },
+  { value: 'C', label: 'Plata (entre $100,000 y $250,000 en ventas)' },
+  { value: 'D', label: 'Bronce (entre $50,000 y $100,000 en ventas)' },
+  { value: 'E', label: 'Regular (entre $10,000 y $50,000 en ventas)' },
+  { value: 'F', label: 'Bajo (menos de $10,000 en ventas)' }
+];
+
 // ==============================|| CUSTOMER ADD / EDIT - FORM ||============================== //
 
 export default function FormCustomerAdd({ customer, closeModal }: { customer: CustomerList | null; closeModal: () => void }) {
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedImage, setSelectedImage] = useState<File | undefined>(undefined);
-  const [avatar, setAvatar] = useState<string | undefined>(
-    getImageUrl(`avatar-${customer && customer !== null && customer?.avatar ? customer.avatar : 1}.png`, ImagePath.USERS)
-  );
 
-  useEffect(() => {
-    if (selectedImage) {
-      setAvatar(URL.createObjectURL(selectedImage));
-    }
-  }, [selectedImage]);
 
   useEffect(() => {
     setLoading(false);
@@ -161,8 +164,6 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
     firstName: Yup.string().max(255).required('First Name is required'),
     lastName: Yup.string().max(255).required('Last Name is required'),
     email: Yup.string().max(255).required('Email is required').email('Must be a valid email'),
-    status: Yup.string().required('Status is required'),
-    location: Yup.string().max(500),
     about: Yup.string().max(500)
   });
 
@@ -229,63 +230,22 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
       <FormikProvider value={formik}>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <Form autoComplete="off" noValidate onSubmit={handleSubmit}>
-            <DialogTitle>{customer ? 'Edit Customer' : 'New Customer'}</DialogTitle>
+            <DialogTitle>{customer ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
             <Divider />
             <DialogContent sx={{ p: 2.5 }}>
               <Grid container spacing={3}>
-                <Grid size={{ xs: 12, md: 3 }}>
-                  <Stack direction="row" sx={{ justifyContent: 'center', mt: 3 }}>
-                    <FormLabel
-                      htmlFor="change-avtar"
-                      sx={{
-                        position: 'relative',
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        '&:hover .MuiBox-root': { opacity: 1 },
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <Avatar alt="Avatar 1" src={avatar} sx={{ width: 72, height: 72, border: '1px dashed' }} />
-                      <Box
-                        sx={(theme) => ({
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          bgcolor: 'rgba(0,0,0,.65)',
-                          ...theme.applyStyles('dark', { bgcolor: 'rgba(255, 255, 255, .75)' }),
-                          width: '100%',
-                          height: '100%',
-                          opacity: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        })}
-                      >
-                        <Stack sx={{ gap: 0.5, alignItems: 'center', color: 'secondary.lighter' }}>
-                          <Camera style={{ fontSize: '2rem' }} />
-                          <Typography>Upload</Typography>
-                        </Stack>
-                      </Box>
-                    </FormLabel>
-                    <TextField
-                      type="file"
-                      id="change-avatar"
-                      placeholder="Outlined"
-                      variant="outlined"
-                      sx={{ display: 'none' }}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setSelectedImage(e.target.files?.[0])}
-                    />
-                  </Stack>
-                </Grid>
-                <Grid size={{ xs: 12, md: 8 }}>
+                <Grid size={{  md: 1 }} >
+                    </Grid>
+                
+                <Grid size={{ xs: 12, md: 10 }} >
                   <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    <Grid size={{ xs: 12, sm: 12 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-firstName">First Name</InputLabel>
+                        <InputLabel htmlFor="customer-firstName">Nombre</InputLabel>
                         <TextField
                           fullWidth
                           id="customer-firstName"
-                          placeholder="Enter First Name"
+                          placeholder="Ingrese el nombre"
                           {...getFieldProps('firstName')}
                           error={Boolean(touched.firstName && errors.firstName)}
                           helperText={touched.firstName && errors.firstName}
@@ -294,73 +254,109 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-lastName">Last Name</InputLabel>
+                        <InputLabel htmlFor="customer-lastName">Apellido Paterno</InputLabel>
                         <TextField
                           fullWidth
                           id="customer-lastName"
-                          placeholder="Enter Last Name"
+                          placeholder="Ingrese el apellido"
                           {...getFieldProps('lastName')}
                           error={Boolean(touched.lastName && errors.lastName)}
                           helperText={touched.lastName && errors.lastName}
                         />
                       </Stack>
                     </Grid>
-                    <Grid size={9}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-email">Email</InputLabel>
+                        <InputLabel htmlFor="customer-lastName">Apellido Materno</InputLabel>
+                        <TextField
+                          fullWidth
+                          id="customer-lastName"
+                          placeholder="Ingrese el apellido"
+                          {...getFieldProps('lastName')}
+                          error={Boolean(touched.lastName && errors.lastName)}
+                          helperText={touched.lastName && errors.lastName}
+                        />
+                      </Stack>
+                    </Grid>
+                    <Grid size={6}>
+                      <Stack sx={{ gap: 1 }}>
+                        <InputLabel htmlFor="customer-email">Correo electrónico</InputLabel>
                         <TextField
                           fullWidth
                           id="customer-email"
-                          placeholder="Enter Customer Email"
+                          placeholder="Ingrese el correo electrónico"
                           {...getFieldProps('email')}
                           error={Boolean(touched.email && errors.email)}
                           helperText={touched.email && errors.email}
                         />
                       </Stack>
                     </Grid>
-                    <Grid size={3}>
+                    <Grid size={6}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-age">Age</InputLabel>
+                        <InputLabel htmlFor="customer-phone">Numero de telefono</InputLabel>
                         <TextField
                           type="number"
                           fullWidth
-                          id="customer-age"
-                          placeholder="Enter Age"
-                          {...getFieldProps('age')}
-                          error={Boolean(touched.age && errors.age)}
-                          helperText={touched.age && errors.age}
+                          id="customer-phone"
+                          placeholder="Ingrese la edad"
+                          {...getFieldProps('phone')}
+                          error={Boolean(touched.phone && errors.phone)}
+                          helperText={touched.phone && errors.phone}
                         />
                       </Stack>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-fatherName">Father Name</InputLabel>
+                        <InputLabel htmlFor="customer-companyName">Nombre de la empresa</InputLabel>
                         <TextField
                           fullWidth
-                          id="customer-fatherName"
-                          placeholder="Enter Father Name"
-                          {...getFieldProps('fatherName')}
-                          error={Boolean(touched.fatherName && errors.fatherName)}
-                          helperText={touched.fatherName && errors.fatherName}
+                          id="customer-companyName"
+                          placeholder="Ingrese el nombre del padre"
+                          {...getFieldProps('companyName')}
+                          error={Boolean(touched.companyName && errors.companyName)}
+                          helperText={touched.companyName && errors.companyName}
                         />
                       </Stack>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-role">Customer Role</InputLabel>
-                        <TextField
-                          fullWidth
-                          id="customer-role"
-                          placeholder="Enter Role"
-                          {...getFieldProps('role')}
-                          error={Boolean(touched.role && errors.role)}
-                          helperText={touched.role && errors.role}
-                        />
+                        <InputLabel htmlFor="customer-classCustomer">Clasificación del cliente</InputLabel>
+                        <FormControl fullWidth>
+                          <Select
+                            id="customer-classCustomer"
+                            displayEmpty
+                            {...getFieldProps('classCustomer')}
+                            onChange={(event: SelectChangeEvent<string>) => setFieldValue('classCustomer', event.target.value as string)}
+                            input={<OutlinedInput id="select-classCustomer" placeholder="Seleccionar clasificación" />}
+                            renderValue={(selected) => {
+                              if (!selected) {
+                                return <Typography variant="subtitle1">Seleccionar clasificación</Typography>;
+                              }
+                              const selectedClass = customerClassifications.find((item) => item.value === selected);
+                              return (
+                                <Typography variant="subtitle2">
+                                  {selectedClass ? selectedClass.label : selected}
+                                </Typography>
+                              );
+                            }}
+                          >
+                            {customerClassifications.map((option) => (
+                              <MenuItem key={option.value} value={option.value}>
+                                <ListItemText primary={option.label} />
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          {touched.classCustomer && errors.classCustomer && (
+                            <FormHelperText error>
+                              {errors.classCustomer}
+                            </FormHelperText>
+                          )}
+                        </FormControl>
                       </Stack>
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-gender">Gender</InputLabel>
+                        <InputLabel htmlFor="customer-gender">Género</InputLabel>
                         <RadioGroup row aria-label="payment-card" {...getFieldProps('gender')}>
                           <FormControlLabel control={<Radio value={Gender.FEMALE} />} label={Gender.FEMALE} />
                           <FormControlLabel control={<Radio value={Gender.MALE} />} label={Gender.MALE} />
@@ -369,23 +365,23 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                     </Grid>
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-status">Status</InputLabel>
+                        <InputLabel htmlFor="customer-status">Estado</InputLabel>
                         <FormControl fullWidth>
                           <Select
                             id="column-hiding"
                             displayEmpty
                             {...getFieldProps('status')}
                             onChange={(event: SelectChangeEvent<string>) => setFieldValue('status', event.target.value as string)}
-                            input={<OutlinedInput id="select-column-hiding" placeholder="Sort by" />}
+                            input={<OutlinedInput id="select-column-hiding" placeholder="Ordenar por" />}
                             renderValue={(selected) => {
                               if (!selected) {
-                                return <Typography variant="subtitle1">Select Status</Typography>;
+                                return <Typography variant="subtitle1">Seleccionar estado</Typography>;
                               }
 
                               const selectedStatus = allStatus.filter((item) => item.value === Number(selected));
                               return (
                                 <Typography variant="subtitle2">
-                                  {selectedStatus.length > 0 ? selectedStatus[0].label : 'Pending'}
+                                  {selectedStatus.length > 0 ? selectedStatus[0].label : 'Pendiente'}
                                 </Typography>
                               );
                             }}
@@ -406,54 +402,26 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-contact">Contact</InputLabel>
+                        <InputLabel htmlFor="customer-contact">Contacto</InputLabel>
                         <TextField
                           fullWidth
                           id="customer-contact"
-                          placeholder="Enter Contact"
+                          placeholder="Ingrese el contacto"
                           {...getFieldProps('contact')}
                           error={Boolean(touched.contact && errors.contact)}
                           helperText={touched.contact && errors.contact}
                         />
                       </Stack>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-country">Country</InputLabel>
-                        <TextField
-                          fullWidth
-                          id="customer-country"
-                          placeholder="Enter Country"
-                          {...getFieldProps('country')}
-                          error={Boolean(touched.country && errors.country)}
-                          helperText={touched.country && errors.country}
-                        />
-                      </Stack>
-                    </Grid>
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-location">Location</InputLabel>
-                        <TextField
-                          fullWidth
-                          id="customer-location"
-                          multiline
-                          rows={2}
-                          placeholder="Enter Location"
-                          {...getFieldProps('location')}
-                          error={Boolean(touched.location && errors.location)}
-                          helperText={touched.location && errors.location}
-                        />
-                      </Stack>
-                    </Grid>
-                    <Grid size={12}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-about">About Customer</InputLabel>
+                        <InputLabel htmlFor="customer-about">Acerca del cliente</InputLabel>
                         <TextField
                           fullWidth
                           id="customer-about"
                           multiline
                           rows={2}
-                          placeholder="Enter Customer Information"
+                          placeholder="Ingrese información del cliente"
                           {...getFieldProps('about')}
                           error={Boolean(touched.about && errors.about)}
                           helperText={touched.about && errors.about}
@@ -462,7 +430,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                     </Grid>
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-skills">Skills</InputLabel>
+                        <InputLabel htmlFor="customer-skills">Habilidades</InputLabel>
                         <Autocomplete
                           multiple
                           fullWidth
@@ -473,7 +441,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                           onChange={(event, newValue) => {
                             setFieldValue('skills', newValue);
                           }}
-                          renderInput={(params) => <TextField {...params} name="skill" placeholder="Add Skills" />}
+                          renderInput={(params) => <TextField {...params} name="skill" placeholder="Agregar habilidades" />}
                           renderTags={(value, getTagProps) =>
                             value.map((option, index) => (
                               <Chip
@@ -492,9 +460,9 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                     <Grid size={12}>
                       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <Stack sx={{ gap: 0.5 }}>
-                          <Typography variant="subtitle1">Make Contact Info Public</Typography>
+                          <Typography variant="subtitle1">Hacer público el contacto</Typography>
                           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Means that anyone viewing your profile will be able to see your contacts details
+                            Significa que cualquier persona que vea tu perfil podrá ver los detalles de contacto
                           </Typography>
                         </Stack>
                         <FormControlLabel control={<Switch defaultChecked sx={{ mt: 0 }} />} label="" labelPlacement="start" />
@@ -502,9 +470,9 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                       <Divider sx={{ my: 2 }} />
                       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <Stack sx={{ gap: 0.5 }}>
-                          <Typography variant="subtitle1">Available to hire</Typography>
+                          <Typography variant="subtitle1">Disponible para contratar</Typography>
                           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Toggling this will let your teammates know that you are available for acquiring new projects
+                            Al activar esto, tus compañeros sabrán que estás disponible para nuevos proyectos
                           </Typography>
                         </Stack>
                         <FormControlLabel control={<Switch sx={{ mt: 0 }} />} label="" labelPlacement="start" />
@@ -519,7 +487,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
               <Grid container sx={{ justifyContent: 'space-between', alignItems: 'center', width: 1 }}>
                 <Grid>
                   {customer && (
-                    <Tooltip title="Delete Customer" placement="top">
+                    <Tooltip title="Eliminar cliente" placement="top">
                       <IconButton onClick={() => setOpenAlert(true)} size="large" color="error">
                         <Trash variant="Bold" />
                       </IconButton>
@@ -529,10 +497,10 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                 <Grid>
                   <Stack direction="row" sx={{ gap: 2, alignItems: 'center' }}>
                     <Button color="error" onClick={closeModal}>
-                      Cancel
+                      Cancelar
                     </Button>
                     <Button type="submit" variant="contained" disabled={isSubmitting}>
-                      {customer ? 'Edit' : 'Add'}
+                      {customer ? 'Editar' : 'Agregar'}
                     </Button>
                   </Stack>
                 </Grid>

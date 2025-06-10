@@ -51,7 +51,7 @@ import { Camera, CloseCircle, Trash } from 'iconsax-react';
 
 // types
 import { SnackbarProps } from 'types/snackbar';
-import { CustomerList } from 'types/customer';
+import { UserList } from 'types/user';
 
 interface StatusProps {
   value: number;
@@ -101,7 +101,7 @@ const skills = [
 ];
 
 // CONSTANT
-const getInitialValues = (user: CustomerList | null) => {
+const getInitialValues = (user: UserList | null) => {
   const newUser = {
     firstName: '',
     lastName: '',
@@ -119,10 +119,11 @@ const getInitialValues = (user: CustomerList | null) => {
     letterasigned: '',
     orderStatus: '',
     contact: '',
-    country: '',
-    location: '',
     isInactive: false,
     about: '',
+    location: '',
+    country: '',
+    address: [],
     skills: [],
     time: ['just now'],
     date: ''
@@ -143,7 +144,7 @@ const allStatus: StatusProps[] = [
 
 // ==============================|| CUSTOMER ADD / EDIT - FORM ||============================== //
 
-export default function FormUserAdd({ user, closeModal }: { user: CustomerList | null; closeModal: () => void }) {
+export default function FormUserAdd({ user, closeModal }: { user: UserList | null; closeModal: () => void }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedImage, setSelectedImage] = useState<File | undefined>(undefined);
   const [avatar, setAvatar] = useState<string | undefined>(
@@ -183,7 +184,7 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting }) => {
       try {
-        let newUser: CustomerList = values;
+        let newUser: UserList = values;
         newUser.name = newUser.firstName + ' ' + newUser.lastName;
 
         if (user) {
