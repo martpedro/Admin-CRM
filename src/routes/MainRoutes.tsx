@@ -6,7 +6,7 @@ import { SimpleLayoutType } from 'config';
 import DashboardLayout from 'layout/Dashboard';
 import PagesLayout from 'layout/Pages';
 import SimpleLayout from 'layout/Simple';
-import InvoiceUserList from 'sections/apps/invoice/InvoiceUserList';
+
 
 // pages routing
 const MaintenanceError = Loadable(lazy(() => import('pages/maintenance/error/404')));
@@ -17,7 +17,7 @@ const MaintenanceComingSoon = Loadable(lazy(() => import('pages/maintenance/comi
 const MaintenanceComingSoon2 = Loadable(lazy(() => import('pages/maintenance/coming-soon/coming-soon2')));
 const AppCustomerList = Loadable(lazy(() => import('pages/apps/customer/list')));
 
-
+const AppUserList = Loadable(lazy(() => import('pages/apps/user/list')));
 
 const AppInvoiceCreate = Loadable(lazy(() => import('pages/apps/invoice/create')));
 const AppInvoiceDashboard = Loadable(lazy(() => import('pages/apps/invoice/dashboard')));
@@ -49,15 +49,15 @@ const MainRoutes = {
             {
               path: 'customer-list',
               element: <AppCustomerList />
-            },
+            }
           ]
         },
-        { 
+        {
           path: 'user',
           children: [
             {
               path: 'user-list',
-              element: <AppCustomerList />
+              element: <AppUserList />
             }
           ]
         },
@@ -66,24 +66,26 @@ const MainRoutes = {
           children: [
             {
               path: 'sales-list',
-              element: <AppInvoiceList />
+              element: <AppInvoiceList />,
+              title: 'editar',
+              
             },
-             {
-                  path: 'dashboard',
-                  element: <AppInvoiceDashboard />
-                },
-                {
-                  path: 'create',
-                  element: <AppInvoiceCreate />
-                },
-                {
-                  path: 'details/:id',
-                  element: <AppInvoiceDetails />
-                },
-                {
-                  path: 'edit/:id',
-                  element: <AppInvoiceEdit />
-                },
+            {
+              path: 'dashboard',
+              element: <AppInvoiceDashboard />
+            },
+            {
+              path: 'create',
+              element: <AppInvoiceCreate />
+            },
+            {
+              path: 'details/:id',
+              element: <AppInvoiceDetails />
+            },
+            {
+              path: 'edit/:id',
+              element: <AppInvoiceEdit />
+            }
           ]
         }
       ]
