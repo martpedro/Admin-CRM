@@ -8,7 +8,7 @@ import { Page, View, Document, StyleSheet, Image, Text, Link } from '@react-pdf/
 import { ImagePath, getImageUrl } from 'utils/getImageUrl';
 
 // types
-import { CustomerList } from 'types/customer';
+import { UserList } from 'types/user';
 
 // assets
 import LinkIcon from 'assets/images/icons/link.png';
@@ -111,61 +111,61 @@ const styles = StyleSheet.create({
 });
 
 interface Props {
-  customer: CustomerList;
+  user: UserList;
 }
 
 // ==============================|| CUSTOMER - CARD ||============================== //
 
-export default function ListSmallCard({ customer }: Props) {
+export default function ListSmallCard({ user: user }: Props) {
   const theme = useTheme();
 
   return (
-    <Document title={`${customer?.fatherName}`}>
+    <Document title={`${user?.fatherName}`}>
       <Page size="A4" style={styles.page}>
         <View style={styles.container}>
           <View style={styles.row}>
-            <Image style={styles.image} src={getImageUrl(`avatar-${!customer.avatar ? 1 : customer.avatar}.png`, ImagePath.USERS)} />
+            <Image style={styles.image} src={getImageUrl(`avatar-${!user.avatar ? 1 : user.avatar}.png`, ImagePath.USERS)} />
             <View style={styles.CardInfo}>
-              <Text style={styles.title}>{customer.fatherName}</Text>
-              <Text style={styles.role}>{customer.role}</Text>
+              <Text style={styles.title}>{user.fatherName}</Text>
+              <Text style={styles.role}>{user.role}</Text>
             </View>
           </View>
           <View style={styles.hr} />
           <View>
-            <Text style={styles.about}>Hello, {customer.about}</Text>
+            <Text style={styles.about}>Hello, {user.about}</Text>
           </View>
           <View style={styles.IconContainer}>
             <View style={[styles.row, styles.IconRow]}>
               <Image src={Mail} style={styles.icon} />
-              <Text style={styles.iconTitle}>{customer.email}</Text>
+              <Text style={styles.iconTitle}>{user.email}</Text>
             </View>
             <View style={[styles.row, styles.IconRow]}>
               <Image src={Maps} style={styles.icon} />
-              <Text style={styles.iconTitle}>{customer.country}</Text>
+              <Text style={styles.iconTitle}>{user.country}</Text>
             </View>
           </View>
           <View style={styles.IconContainer}>
             <View style={[styles.row, styles.IconRow]}>
               <Image src={Phone} style={styles.icon} />
-              <Text style={styles.iconTitle}>{customer.contact}</Text>
+              <Text style={styles.iconTitle}>{user.contact}</Text>
             </View>
             <View style={[styles.row, styles.IconRow]}>
               <Image src={LinkIcon} style={styles.icon} />
               <Link
                 style={[styles.iconTitle, { color: theme.palette.primary.main }]}
-                src={`https://${customer.firstName}.en`}
-              >{`https://${customer.firstName}.en`}</Link>
+                src={`https://${user.firstName}.en`}
+              >{`https://${user.firstName}.en`}</Link>
             </View>
           </View>
           <View style={[styles.row, { gap: 1, paddingTop: 18 }]}>
-            {customer.skills.map((skill: string, index: number) => (
+            {user.skills.map((skill: string, index: number) => (
               <View style={styles.chip} key={index}>
                 <Text style={styles.chipTitle}>{skill}</Text>
               </View>
             ))}
           </View>
           <View style={styles.timer}>
-            <Text style={styles.iconTitle}> Updated in {customer.time}</Text>
+            <Text style={styles.iconTitle}> Updated in {user.time}</Text>
           </View>
         </View>
       </Page>

@@ -105,6 +105,7 @@ const getInitialValues = (user: CustomerList | null) => {
   const newUser = {
     firstName: '',
     lastName: '',
+    middleName: '',
     name: '',
     email: '',
     age: 18,
@@ -115,6 +116,7 @@ const getInitialValues = (user: CustomerList | null) => {
     orders: 0,
     progress: 50,
     status: 2,
+    letterasigned: '',
     orderStatus: '',
     contact: '',
     country: '',
@@ -140,7 +142,7 @@ const allStatus: StatusProps[] = [
 
 // ==============================|| CUSTOMER ADD / EDIT - FORM ||============================== //
 
-export default function FormCustomerAdd({ user, closeModal }: { user: CustomerList | null; closeModal: () => void }) {
+export default function FormUserAdd({ user, closeModal }: { user: CustomerList | null; closeModal: () => void }) {
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedImage, setSelectedImage] = useState<File | undefined>(undefined);
   const [avatar, setAvatar] = useState<string | undefined>(
@@ -158,12 +160,13 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
   }, []);
 
   const CustomerSchema = Yup.object().shape({
-    firstName: Yup.string().max(255).required('First Name is required'),
-    lastName: Yup.string().max(255).required('Last Name is required'),
-    email: Yup.string().max(255).required('Email is required').email('Must be a valid email'),
-    status: Yup.string().required('Status is required'),
-    location: Yup.string().max(500),
-    about: Yup.string().max(500)
+    firstName: Yup.string().max(255).required('El nombre es obligatorio'),
+    lastName: Yup.string().max(255).required('El apellido es obligatorio'),
+    middleName: Yup.string().max(255, 'El apellido no debe exceder los 255 caracteres'),
+    email: Yup.string().max(255).required('El correo electrónico es obligatorio').email('Debe ser un correo electrónico válido'),
+    status: Yup.string().required('El estado es obligatorio'),
+    location: Yup.string().max(500, 'La ubicación no debe exceder los 500 caracteres'),
+    about: Yup.string().max(500, 'La información no debe exceder los 500 caracteres')
   });
 
   const [openAlert, setOpenAlert] = useState(false);
@@ -186,7 +189,7 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
           updateUser(newUser.id!, newUser).then(() => {
             openSnackbar({
               open: true,
-              message: 'Customer update successfully.',
+              message: 'Cliente actualizado exitosamente.',
               variant: 'alert',
               alert: {
                 color: 'success'
@@ -199,7 +202,7 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
           await insertUser(newUser).then(() => {
             openSnackbar({
               open: true,
-              message: 'Customer added successfully.',
+              message: 'Cliente agregado exitosamente.',
               variant: 'alert',
               alert: {
                 color: 'success'
@@ -229,7 +232,7 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
       <FormikProvider value={formik}>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <Form autoComplete="off" noValidate onSubmit={handleSubmit}>
-            <DialogTitle>{user ? 'Edit Customer' : 'New Customer'}</DialogTitle>
+            <DialogTitle>{user ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
             <Divider />
             <DialogContent sx={{ p: 2.5 }}>
               <Grid container spacing={3}>
@@ -263,7 +266,7 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                       >
                         <Stack sx={{ gap: 0.5, alignItems: 'center', color: 'secondary.lighter' }}>
                           <Camera style={{ fontSize: '2rem' }} />
-                          <Typography>Upload</Typography>
+                          <Typography>Subir</Typography>
                         </Stack>
                       </Box>
                     </FormLabel>
@@ -281,11 +284,11 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                   <Grid container spacing={3}>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-firstName">First Name</InputLabel>
+                        <InputLabel htmlFor="user-firstName">Nombre</InputLabel>
                         <TextField
                           fullWidth
                           id="user-firstName"
-                          placeholder="Enter First Name"
+                          placeholder="Ingrese el nombre"
                           {...getFieldProps('firstName')}
                           error={Boolean(touched.firstName && errors.firstName)}
                           helperText={touched.firstName && errors.firstName}
@@ -294,98 +297,87 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-lastName">Last Name</InputLabel>
+                        <InputLabel htmlFor="user-lastName">Apellido Paterno</InputLabel>
                         <TextField
                           fullWidth
                           id="user-lastName"
-                          placeholder="Enter Last Name"
+                          placeholder="Ingrese el apellido"
                           {...getFieldProps('lastName')}
                           error={Boolean(touched.lastName && errors.lastName)}
                           helperText={touched.lastName && errors.lastName}
                         />
                       </Stack>
                     </Grid>
+                    
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Stack sx={{ gap: 1 }}>
+                        <InputLabel htmlFor="user-middleName">Apellido Materno</InputLabel>
+                        <TextField
+                          fullWidth
+                          id="user-middleName"
+                          placeholder="Ingrese el apellido"
+                          {...getFieldProps('middleName')}
+                          error={Boolean(touched.middleName && errors.middleName)}
+                          helperText={touched.middleName && errors.middleName}
+                        />
+                      </Stack>
+                    </Grid>
                     <Grid size={9}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-email">Email</InputLabel>
+                        <InputLabel htmlFor="user-email">Correo electrónico</InputLabel>
                         <TextField
                           fullWidth
                           id="user-email"
-                          placeholder="Enter Customer Email"
+                          placeholder="Ingrese el correo electrónico"
                           {...getFieldProps('email')}
                           error={Boolean(touched.email && errors.email)}
                           helperText={touched.email && errors.email}
                         />
                       </Stack>
                     </Grid>
-                    <Grid size={3}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-age">Age</InputLabel>
-                        <TextField
-                          type="number"
-                          fullWidth
-                          id="user-age"
-                          placeholder="Enter Age"
-                          {...getFieldProps('age')}
-                          error={Boolean(touched.age && errors.age)}
-                          helperText={touched.age && errors.age}
-                        />
-                      </Stack>
-                    </Grid>
+                    
+                   
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-fatherName">Father Name</InputLabel>
-                        <TextField
-                          fullWidth
-                          id="user-fatherName"
-                          placeholder="Enter Father Name"
-                          {...getFieldProps('fatherName')}
-                          error={Boolean(touched.fatherName && errors.fatherName)}
-                          helperText={touched.fatherName && errors.fatherName}
-                        />
-                      </Stack>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-role">Customer Role</InputLabel>
+                        <InputLabel htmlFor="user-role">Rol</InputLabel>
                         <TextField
                           fullWidth
                           id="user-role"
-                          placeholder="Enter Role"
+                          placeholder="Ingrese el rol"
                           {...getFieldProps('role')}
                           error={Boolean(touched.role && errors.role)}
                           helperText={touched.role && errors.role}
                         />
                       </Stack>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    {/* <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-gender">Gender</InputLabel>
+                        <InputLabel htmlFor="user-gender">Género</InputLabel>
                         <RadioGroup row aria-label="payment-card" {...getFieldProps('gender')}>
                           <FormControlLabel control={<Radio value={Gender.FEMALE} />} label={Gender.FEMALE} />
                           <FormControlLabel control={<Radio value={Gender.MALE} />} label={Gender.MALE} />
                         </RadioGroup>
                       </Stack>
-                    </Grid>
+                    </Grid> */}
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-status">Status</InputLabel>
+                        <InputLabel htmlFor="user-status">Estado</InputLabel>
                         <FormControl fullWidth>
                           <Select
                             id="column-hiding"
                             displayEmpty
                             {...getFieldProps('status')}
                             onChange={(event: SelectChangeEvent<string>) => setFieldValue('status', event.target.value as string)}
-                            input={<OutlinedInput id="select-column-hiding" placeholder="Sort by" />}
+                            input={<OutlinedInput id="select-column-hiding" placeholder="Ordenar por" />}
                             renderValue={(selected) => {
                               if (!selected) {
-                                return <Typography variant="subtitle1">Select Status</Typography>;
+                                return <Typography variant="subtitle1">Seleccionar estado</Typography>;
                               }
 
                               const selectedStatus = allStatus.filter((item) => item.value === Number(selected));
                               return (
                                 <Typography variant="subtitle2">
-                                  {selectedStatus.length > 0 ? selectedStatus[0].label : 'Pending'}
+                                  {selectedStatus.length > 0 ? selectedStatus[0].label : 'Pendiente'}
                                 </Typography>
                               );
                             }}
@@ -406,11 +398,11 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-contact">Contact</InputLabel>
+                        <InputLabel htmlFor="user-contact">Contacto</InputLabel>
                         <TextField
                           fullWidth
                           id="user-contact"
-                          placeholder="Enter Contact"
+                          placeholder="Ingrese el contacto"
                           {...getFieldProps('contact')}
                           error={Boolean(touched.contact && errors.contact)}
                           helperText={touched.contact && errors.contact}
@@ -419,11 +411,11 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-country">Country</InputLabel>
+                        <InputLabel htmlFor="user-country">País</InputLabel>
                         <TextField
                           fullWidth
                           id="user-country"
-                          placeholder="Enter Country"
+                          placeholder="Ingrese el país"
                           {...getFieldProps('country')}
                           error={Boolean(touched.country && errors.country)}
                           helperText={touched.country && errors.country}
@@ -432,13 +424,13 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                     </Grid>
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-location">Location</InputLabel>
+                        <InputLabel htmlFor="user-location">Ubicación</InputLabel>
                         <TextField
                           fullWidth
                           id="user-location"
                           multiline
                           rows={2}
-                          placeholder="Enter Location"
+                          placeholder="Ingrese la ubicación"
                           {...getFieldProps('location')}
                           error={Boolean(touched.location && errors.location)}
                           helperText={touched.location && errors.location}
@@ -447,13 +439,13 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                     </Grid>
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-about">About Customer</InputLabel>
+                        <InputLabel htmlFor="user-about">Acerca del cliente</InputLabel>
                         <TextField
                           fullWidth
                           id="user-about"
                           multiline
                           rows={2}
-                          placeholder="Enter Customer Information"
+                          placeholder="Ingrese información del cliente"
                           {...getFieldProps('about')}
                           error={Boolean(touched.about && errors.about)}
                           helperText={touched.about && errors.about}
@@ -462,7 +454,7 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                     </Grid>
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-skills">Skills</InputLabel>
+                        <InputLabel htmlFor="user-skills">Habilidades</InputLabel>
                         <Autocomplete
                           multiple
                           fullWidth
@@ -473,7 +465,7 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                           onChange={(event, newValue) => {
                             setFieldValue('skills', newValue);
                           }}
-                          renderInput={(params) => <TextField {...params} name="skill" placeholder="Add Skills" />}
+                          renderInput={(params) => <TextField {...params} name="skill" placeholder="Agregar habilidades" />}
                           renderTags={(value, getTagProps) =>
                             value.map((option, index) => (
                               <Chip
@@ -492,9 +484,9 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                     <Grid size={12}>
                       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <Stack sx={{ gap: 0.5 }}>
-                          <Typography variant="subtitle1">Make Contact Info Public</Typography>
+                          <Typography variant="subtitle1">Hacer público el contacto</Typography>
                           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Means that anyone viewing your profile will be able to see your contacts details
+                            Significa que cualquier persona que vea tu perfil podrá ver los detalles de contacto
                           </Typography>
                         </Stack>
                         <FormControlLabel control={<Switch defaultChecked sx={{ mt: 0 }} />} label="" labelPlacement="start" />
@@ -502,9 +494,9 @@ export default function FormCustomerAdd({ user, closeModal }: { user: CustomerLi
                       <Divider sx={{ my: 2 }} />
                       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <Stack sx={{ gap: 0.5 }}>
-                          <Typography variant="subtitle1">Available to hire</Typography>
+                          <Typography variant="subtitle1">Disponible para contratar</Typography>
                           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Toggling this will let your teammates know that you are available for acquiring new projects
+                            Al activar esto, tus compañeros
                           </Typography>
                         </Stack>
                         <FormControlLabel control={<Switch sx={{ mt: 0 }} />} label="" labelPlacement="start" />

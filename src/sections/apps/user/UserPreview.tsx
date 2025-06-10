@@ -23,7 +23,7 @@ import { PatternFormat } from 'react-number-format';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 
 // project-imports
-import AlertCustomerDelete from './AlertCustomerDelete';
+import AlertUserDelete from './AlertUserDelete';
 import ListCard from './export-pdf/ListCard';
 
 import Avatar from 'components/@extended/Avatar';
@@ -34,21 +34,21 @@ import SimpleBar from 'components/third-party/SimpleBar';
 import { ImagePath, getImageUrl } from 'utils/getImageUrl';
 
 // types
-import { CustomerList } from 'types/customer';
+import { UserList } from 'types/user';
 
 // assets
 import { DocumentDownload, Edit, Trash } from 'iconsax-react';
 
 interface Props {
-  customer: CustomerList;
+  user: UserList;
   open: boolean;
   onClose: () => void;
-  editCustomer: () => void;
+  editUser: () => void;
 }
 
-// ==============================|| CUSTOMER - PREVIEW ||============================== //
+// ==============================|| USER - PREVIEW ||============================== //
 
-export default function CustomerPreview({ customer, open, onClose, editCustomer }: Props) {
+export default function UserPreview({  user, open, onClose, editUser }: Props) {
   const [openAlert, setOpenAlert] = useState(false);
 
   const handleClose = () => {
@@ -73,7 +73,7 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
                 disablePadding
                 secondaryAction={
                   <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'center' }}>
-                    <PDFDownloadLink document={<ListCard user={customer} />} fileName={`Customer-${customer.name}.pdf`}>
+                    <PDFDownloadLink document={<ListCard user={user} />} fileName={`User-${user.name}.pdf`}>
                       <Tooltip title="Export">
                         <IconButton color="secondary">
                           <DocumentDownload />
@@ -81,7 +81,7 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
                       </Tooltip>
                     </PDFDownloadLink>
                     <Tooltip title="Edit">
-                      <IconButton color="secondary" onClick={editCustomer}>
+                      <IconButton color="secondary" onClick={editUser}>
                         <Edit />
                       </IconButton>
                     </Tooltip>
@@ -95,14 +95,14 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
               >
                 <ListItemAvatar sx={{ mr: 0.75 }}>
                   <Avatar
-                    alt={customer.name}
+                    alt={user.name}
                     size="lg"
-                    src={getImageUrl(`avatar-${!customer.avatar ? 1 : customer.avatar}.png`, ImagePath.USERS)}
+                    src={getImageUrl(`avatar-${!user.avatar ? 1 : user.avatar}.png`, ImagePath.USERS)}
                   />
                 </ListItemAvatar>
                 <ListItemText
-                  primary={<Typography variant="h5">{customer.name}</Typography>}
-                  secondary={<Typography color="secondary">{customer.role}</Typography>}
+                  primary={<Typography variant="h5">{user.name}</Typography>}
+                  secondary={<Typography color="secondary">{user.role}</Typography>}
                 />
               </ListItem>
             </List>
@@ -115,7 +115,7 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
                     <Grid size={12}>
                       <MainCard title="About me">
                         <Typography>
-                          Hello, Myself {customer.name}, I’m {customer.role} in international company, {customer.about}
+                          Hello, Myself {user.name}, I’m {user.role} in international company, {user.about}
                         </Typography>
                       </MainCard>
                     </Grid>
@@ -217,7 +217,7 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
                     <Grid size={12}>
                       <MainCard title="Skills">
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', listStyle: 'none', p: 0.5, m: 0 }} component="ul">
-                          {customer.skills.map((skill: string, index: number) => (
+                          {user.skills.map((skill: string, index: number) => (
                             <ListItem disablePadding key={index} sx={{ width: 'auto', pr: 0.75, pb: 0.75 }}>
                               <Chip color="secondary" variant="outlined" size="small" label={skill} />
                             </ListItem>
@@ -233,27 +233,27 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
                       <Stack sx={{ gap: 0.5 }}>
                         <Typography color="secondary">Father Name</Typography>
                         <Typography>
-                          Mr. {customer.firstName} {customer.lastName}
+                          Mr. {user.firstName} {user.lastName}
                         </Typography>
                       </Stack>
                       <Stack sx={{ gap: 0.5 }}>
                         <Typography color="secondary">Email</Typography>
-                        <Typography>{customer.email}</Typography>
+                        <Typography>{user.email}</Typography>
                       </Stack>
                       <Stack sx={{ gap: 0.5 }}>
                         <Typography color="secondary">Contact</Typography>
                         <Typography>
-                          <PatternFormat displayType="text" format="+1 (###) ###-####" mask="_" defaultValue={customer.contact} />
+                          <PatternFormat displayType="text" format="+1 (###) ###-####" mask="_" defaultValue={user.contact} />
                         </Typography>
                       </Stack>
                       <Stack sx={{ gap: 0.5 }}>
                         <Typography color="secondary">Location</Typography>
-                        <Typography> {customer.country} </Typography>
+                        <Typography> {user.country} </Typography>
                       </Stack>
                       <Stack sx={{ gap: 0.5 }}>
                         <Typography color="secondary">Website</Typography>
                         <Link href="https://google.com" target="_blank" sx={{ textTransform: 'lowercase' }}>
-                          https://{customer.firstName}.en
+                          https://{user.firstName}.en
                         </Link>
                       </Stack>
                     </Stack>
@@ -270,7 +270,7 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
           </DialogActions>
         </Box>
       </Dialog>
-      <AlertCustomerDelete id={customer.id!} title={customer.name} open={openAlert} handleClose={handleClose} />
+      <AlertUserDelete id={user.id!} title={user.name} open={openAlert} handleClose={handleClose} />
     </>
   );
 }

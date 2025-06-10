@@ -24,8 +24,8 @@ import { PDFDownloadLink } from '@react-pdf/renderer';
 
 // project-imports
 import AlertUserDelete from './AlertUserDelete';
-import CustomerModal from './UserModal';
-import CustomerPreview from './UserPreview';
+import UserModal from './UserModal';
+import UserPreview from './UserPreview';
 import ListSmallCard from './export-pdf/ListSmallCard';
 import Avatar from 'components/@extended/Avatar';
 import IconButton from 'components/@extended/IconButton';
@@ -37,14 +37,14 @@ import { CallCalling, Link2, Location, Sms } from 'iconsax-react';
 import { ImagePath, getImageUrl } from 'utils/getImageUrl';
 
 // types
-import { CustomerList } from 'types/customer';
+import { UserList } from 'types/user';
 
-// ==============================|| CUSTOMER - CARD ||============================== //
+// ==============================|| USER - CARD ||============================== //
 
-export default function CustomerCard({ customer }: { customer: CustomerList }) {
+export default function UserCard({ user }: { user: UserList }) {
   const [open, setOpen] = useState(false);
-  const [customerModal, setCustomerModal] = useState<boolean>(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerList | null>(null);
+  const [userModal, setUserModal] = useState<boolean>(false);
+  const [selectedUser, setSelectedUser] = useState<UserList | null>(null);
 
   const handleClickOpen = () => {
     setOpen(true);
@@ -70,9 +70,9 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
     setAnchorEl(null);
   };
 
-  const editCustomer = () => {
-    setSelectedCustomer(customer);
-    setCustomerModal(true);
+  const editUser = () => {
+    setSelectedUser(user);
+    setUserModal(true);
   };
 
   return (
@@ -96,11 +96,11 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
                 }
               >
                 <ListItemAvatar>
-                  <Avatar alt={customer.name} src={getImageUrl(`avatar-${!customer.avatar ? 1 : customer.avatar}.png`, ImagePath.USERS)} />
+                  <Avatar alt={user.name} src={getImageUrl(`avatar-${!user.avatar ? 1 : user.avatar}.png`, ImagePath.USERS)} />
                 </ListItemAvatar>
                 <ListItemText
-                  primary={<Typography variant="subtitle1">{customer.name}</Typography>}
-                  secondary={<Typography sx={{ color: 'text.secondary' }}>{customer.role}</Typography>}
+                  primary={<Typography variant="subtitle1">{user.name}</Typography>}
+                  secondary={<Typography sx={{ color: 'text.secondary' }}>{user.role}</Typography>}
                 />
               </ListItem>
             </List>
@@ -115,11 +115,11 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
               <MenuItem sx={{ a: { textDecoration: 'none', color: 'inherit' } }}>
-                <PDFDownloadLink document={<ListSmallCard customer={customer} />} fileName={`Customer-${customer.name}.pdf`}>
+                <PDFDownloadLink document={<ListSmallCard user={user} />} fileName={`User-${user.name}.pdf`}>
                   Export PDF
                 </PDFDownloadLink>
               </MenuItem>
-              <MenuItem onClick={editCustomer}>Edit</MenuItem>
+              <MenuItem onClick={editUser}>Edit</MenuItem>
               <MenuItem onClick={handleAlertClose}>Delete</MenuItem>
             </Menu>
           </Grid>
@@ -127,7 +127,7 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
             <Divider />
           </Grid>
           <Grid size={12}>
-            <Typography>Hello, {customer.about}</Typography>
+            <Typography>Hello, {user.about}</Typography>
           </Grid>
           <Grid size={12}>
             <Grid container spacing={1} direction={{ xs: 'column', md: 'row' }}>
@@ -144,7 +144,7 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
                     <ListItemIcon>
                       <Sms size={18} />
                     </ListItemIcon>
-                    <ListItemText primary={<Typography sx={{ color: 'text.secondary' }}>{customer.email}</Typography>} />
+                    <ListItemText primary={<Typography sx={{ color: 'text.secondary' }}>{user.email}</Typography>} />
                   </ListItem>
                   <ListItem alignItems="flex-start">
                     <ListItemIcon>
@@ -153,7 +153,7 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
                     <ListItemText
                       primary={
                         <Typography sx={{ color: 'text.secondary' }}>
-                          <PatternFormat displayType="text" format="+1 (###) ###-####" mask="_" defaultValue={customer.contact} />
+                          <PatternFormat displayType="text" format="+1 (###) ###-####" mask="_" defaultValue={user.contact} />
                         </Typography>
                       }
                     />
@@ -168,7 +168,7 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
                     <ListItemIcon>
                       <Location size={18} />
                     </ListItemIcon>
-                    <ListItemText primary={<Typography sx={{ color: 'text.secondary' }}>{customer.country}</Typography>} />
+                    <ListItemText primary={<Typography sx={{ color: 'text.secondary' }}>{user.country}</Typography>} />
                   </ListItem>
                   <ListItem alignItems="flex-start">
                     <ListItemIcon>
@@ -177,7 +177,7 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
                     <ListItemText
                       primary={
                         <Link href="https://google.com" target="_blank" sx={{ textTransform: 'lowercase' }}>
-                          https://{customer.firstName}.en
+                          https://{user.firstName}.en
                         </Link>
                       }
                     />
@@ -189,7 +189,7 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
           <Grid size={12}>
             <Box>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', listStyle: 'none', p: 0.5, m: 0 }} component="ul">
-                {customer.skills.map((skill: string, index: number) => (
+                {user.skills.map((skill: string, index: number) => (
                   <ListItem disablePadding key={index} sx={{ width: 'auto', pr: 0.75, pb: 0.75 }}>
                     <Chip color="secondary" variant="outlined" size="small" label={skill} sx={{ color: 'text.secondary' }} />
                   </ListItem>
@@ -204,16 +204,16 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
           sx={{ gap: 1, alignItems: 'center', justifyContent: 'space-between', mt: 'auto', mb: 0, pt: 2.25 }}
         >
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Updated in {customer.time}
+            Updated in {user.time}
           </Typography>
           <Button variant="outlined" size="small" onClick={handleClickOpen}>
             Preview
           </Button>
         </Stack>
       </MainCard>
-      <CustomerPreview customer={customer} open={open} onClose={handleClose} editCustomer={editCustomer} />
-      <AlertUserDelete id={customer.id!} title={customer.name} open={openAlert} handleClose={handleAlertClose} />
-      <CustomerModal open={customerModal} modalToggler={setCustomerModal} customer={selectedCustomer} />
+      <UserPreview user={user} open={open} onClose={handleClose} editUser={editUser} />
+      <AlertUserDelete id={user.id!} title={user.name} open={openAlert} handleClose={handleAlertClose} />
+      <UserModal open={userModal} modalToggler={setUserModal} user={selectedUser} />
     </>
   );
 }

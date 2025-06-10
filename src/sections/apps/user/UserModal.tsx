@@ -6,31 +6,31 @@ import Stack from '@mui/material/Stack';
 import Box from '@mui/material/Box';
 
 // project-imports
-import FormCustomerAdd from './FormCustomerAdd';
-import { useGetCustomer } from 'api/customer';
+import FormUserAdd from './FormUserAdd';
+import { useGetUser } from 'api/user';
 import CircularWithPath from 'components/@extended/progress/CircularWithPath';
 import MainCard from 'components/MainCard';
 import SimpleBar from 'components/third-party/SimpleBar';
 
 // types
-import { CustomerList } from 'types/customer';
+import { UserList } from 'types/user';
 
 interface Props {
   open: boolean;
   modalToggler: (state: boolean) => void;
-  customer?: CustomerList | null;
+  user?: UserList | null;
 }
 
-// ==============================|| CUSTOMER ADD / EDIT ||============================== //
+// ==============================|| USER ADD / EDIT ||============================== //
 
-export default function CustomerModal({ open, modalToggler, customer }: Props) {
-  const { customersLoading: loading } = useGetCustomer();
+export default function UserModal({ open, modalToggler, user: user }: Props) {
+  const { UsersLoading: loading } = useGetUser();
 
   const closeModal = useCallback(() => modalToggler(false), [modalToggler]);
 
-  const customerForm = useMemo(
-    () => !loading && <FormCustomerAdd customer={customer || null} closeModal={closeModal} />,
-    [customer, loading, closeModal]
+  const userForm = useMemo(
+    () => !loading && <FormUserAdd user={user || null} closeModal={closeModal} />,
+    [user, loading, closeModal]
   );
 
   return (
@@ -39,8 +39,8 @@ export default function CustomerModal({ open, modalToggler, customer }: Props) {
         <Modal
           open={open}
           onClose={closeModal}
-          aria-labelledby="modal-customer-add-label"
-          aria-describedby="modal-customer-add-description"
+          aria-labelledby="modal-user-add-label"
+          aria-describedby="modal-user-add-description"
           sx={{ '& .MuiPaper-root:focus': { outline: 'none' } }}
         >
           <MainCard
@@ -58,7 +58,7 @@ export default function CustomerModal({ open, modalToggler, customer }: Props) {
                   </Stack>
                 </Box>
               ) : (
-                customerForm
+                userForm
               )}
             </SimpleBar>
           </MainCard>

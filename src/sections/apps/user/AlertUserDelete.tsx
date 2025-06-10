@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 // project-imports
-import { deleteCustomer as deleteUser } from 'api/customer';
+import { deleteUser } from 'api/user';
 import { openSnackbar } from 'api/snackbar';
 import Avatar from 'components/@extended/Avatar';
 import { PopupTransition } from 'components/@extended/Transitions';
