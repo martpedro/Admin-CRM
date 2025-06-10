@@ -50,9 +50,11 @@ export async function insertUser(newUser: UserList) {
   mutate(
     endpoints.key + endpoints.list,
     (currentUser: any) => {
+      console.log('currentUser', currentUser);
+      currentUser = currentUser || { Users: [] }; // Ensure currentUser is defined
       newUser.id = currentUser.Users.length + 1;
-      const addedUser: UserList[] = [...currentUser.Users, newUser];
-
+      const addedUser: UserList[] = [...(currentUser.Users || []), newUser];
+      console.log('addedUser', addedUser);
       return {
         ...currentUser,
         Users: addedUser

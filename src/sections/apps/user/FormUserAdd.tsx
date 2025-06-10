@@ -121,6 +121,7 @@ const getInitialValues = (user: CustomerList | null) => {
     contact: '',
     country: '',
     location: '',
+    isInactive: false,
     about: '',
     skills: [],
     time: ['just now'],
@@ -187,6 +188,8 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
 
         if (user) {
           updateUser(newUser.id!, newUser).then(() => {
+            console.log('newUser update', newUser);
+
             openSnackbar({
               open: true,
               message: 'Cliente actualizado exitosamente.',
@@ -199,7 +202,9 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
             closeModal();
           });
         } else {
+          console.log('newUser insert', newUser);
           await insertUser(newUser).then(() => {
+
             openSnackbar({
               open: true,
               message: 'Cliente agregado exitosamente.',
@@ -282,7 +287,7 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
                 </Grid>
                 <Grid size={{ xs: 12, md: 8 }}>
                   <Grid container spacing={3}>
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    <Grid size={{ xs: 12, sm: 12 }}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-firstName">Nombre</InputLabel>
                         <TextField
@@ -322,7 +327,7 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
                         />
                       </Stack>
                     </Grid>
-                    <Grid size={9}>
+                    <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-email">Correo electrónico</InputLabel>
                         <TextField
@@ -339,14 +344,22 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
                    
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-role">Rol</InputLabel>
+                        <InputLabel htmlFor="user-letterasigned">Letra de Cotización</InputLabel>
                         <TextField
                           fullWidth
-                          id="user-role"
-                          placeholder="Ingrese el rol"
-                          {...getFieldProps('role')}
-                          error={Boolean(touched.role && errors.role)}
-                          helperText={touched.role && errors.role}
+                          id="user-letterasigned"
+                          placeholder="Ingrese la letra de cotización"
+                          {...getFieldProps('letterasigned')}
+                          inputProps={{
+                            style: { textTransform: 'uppercase' }
+                          }}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                            const upperValue = e.target.value.toUpperCase();
+                            setFieldValue('letterasigned', upperValue);
+                          }}
+                          value={formik.values.letterasigned}
+                          error={Boolean(touched.letterasigned && errors.letterasigned)}
+                          helperText={touched.letterasigned && errors.letterasigned}
                         />
                       </Stack>
                     </Grid>
@@ -359,19 +372,19 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
                         </RadioGroup>
                       </Stack>
                     </Grid> */}
-                    <Grid size={12}>
+                    <Grid size={6}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-status">Estado</InputLabel>
+                        <InputLabel htmlFor="user-role">Rol</InputLabel>
                         <FormControl fullWidth>
                           <Select
                             id="column-hiding"
                             displayEmpty
-                            {...getFieldProps('status')}
-                            onChange={(event: SelectChangeEvent<string>) => setFieldValue('status', event.target.value as string)}
+                            {...getFieldProps('role')}
+                            onChange={(event: SelectChangeEvent<string>) => setFieldValue('role', event.target.value as string)}
                             input={<OutlinedInput id="select-column-hiding" placeholder="Ordenar por" />}
                             renderValue={(selected) => {
                               if (!selected) {
-                                return <Typography variant="subtitle1">Seleccionar estado</Typography>;
+                                return <Typography variant="subtitle1">Seleccionar Rol</Typography>;
                               }
 
                               const selectedStatus = allStatus.filter((item) => item.value === Number(selected));
@@ -389,14 +402,14 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
                             ))}
                           </Select>
                         </FormControl>
-                        {touched.status && errors.status && (
+                        {touched.role && errors.role && (
                           <FormHelperText error id="standard-weight-helper-text-email-login" sx={{ pl: 1.75 }}>
-                            {errors.status}
+                            {errors.role}
                           </FormHelperText>
                         )}
                       </Stack>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    {/* <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-contact">Contacto</InputLabel>
                         <TextField
@@ -408,8 +421,8 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
                           helperText={touched.contact && errors.contact}
                         />
                       </Stack>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    </Grid> */}
+                    {/* <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-country">País</InputLabel>
                         <TextField
@@ -421,8 +434,8 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
                           helperText={touched.country && errors.country}
                         />
                       </Stack>
-                    </Grid>
-                    <Grid size={12}>
+                    </Grid> */}
+                    {/* <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-location">Ubicación</InputLabel>
                         <TextField
@@ -436,8 +449,8 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
                           helperText={touched.location && errors.location}
                         />
                       </Stack>
-                    </Grid>
-                    <Grid size={12}>
+                    </Grid> */}
+                    {/* <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-about">Acerca del cliente</InputLabel>
                         <TextField
@@ -451,10 +464,10 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
                           helperText={touched.about && errors.about}
                         />
                       </Stack>
-                    </Grid>
+                    </Grid> */}
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-skills">Habilidades</InputLabel>
+                        <InputLabel htmlFor="user-skills">Subsidiarias</InputLabel>
                         <Autocomplete
                           multiple
                           fullWidth
@@ -482,25 +495,25 @@ export default function FormUserAdd({ user, closeModal }: { user: CustomerList |
                       </Stack>
                     </Grid>
                     <Grid size={12}>
-                      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <Stack sx={{ gap: 0.5 }}>
-                          <Typography variant="subtitle1">Hacer público el contacto</Typography>
+                          <Typography variant="subtitle1">Esta Inactivo</Typography>
                           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Significa que cualquier persona que vea tu perfil podrá ver los detalles de contacto
+                          Significa que no podra acceder al sistema
                           </Typography>
                         </Stack>
-                        <FormControlLabel control={<Switch defaultChecked sx={{ mt: 0 }} />} label="" labelPlacement="start" />
-                      </Stack>
-                      <Divider sx={{ my: 2 }} />
-                      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <Stack sx={{ gap: 0.5 }}>
-                          <Typography variant="subtitle1">Disponible para contratar</Typography>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Al activar esto, tus compañeros
-                          </Typography>
+                        <FormControlLabel
+                          control={
+                          <Switch
+                            checked={formik.values.isInactive}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setFieldValue('isInactive', e.target.checked)}
+                            sx={{ mt: 0 }}
+                          />
+                          }
+                          label=""
+                          labelPlacement="start"
+                        />
                         </Stack>
-                        <FormControlLabel control={<Switch sx={{ mt: 0 }} />} label="" labelPlacement="start" />
-                      </Stack>
                     </Grid>
                   </Grid>
                 </Grid>
