@@ -479,7 +479,7 @@ export default function List() {
 
   return (
     <>
-          <Breadcrumbs custom heading="invoice-list" links={breadcrumbLinks} />
+          {/* <Breadcrumbs custom heading="invoice-list" links={breadcrumbLinks} /> */}
 
       <Grid container spacing={GRID_COMMON_SPACING} sx={{ pb: 2 }}>
         <Grid size={{ xs: 12, md: 8 }}>
