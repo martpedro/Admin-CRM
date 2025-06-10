@@ -249,7 +249,7 @@ function ReactTable({ data, columns, modalToggler }: Props) {
 // ==============================|| CUSTOMER LIST ||============================== //
 
 export default function CustomerListPage() {
-  const { customersLoading: loading, customers: lists } = useGetCustomer();
+  const { usersLoading: loading, customers: lists } = useGetCustomer();
 
   const [open, setOpen] = useState<boolean>(false);
 

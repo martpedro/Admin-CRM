@@ -24,7 +24,7 @@ interface Props {
 // ==============================|| CUSTOMER ADD / EDIT ||============================== //
 
 export default function CustomerModal({ open, modalToggler, customer }: Props) {
-  const { customersLoading: loading } = useGetCustomer();
+  const { usersLoading: loading } = useGetCustomer();
 
   const closeModal = useCallback(() => modalToggler(false), [modalToggler]);
 

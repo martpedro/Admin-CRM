@@ -19,7 +19,7 @@ import { CustomerList } from 'types/customer';
 
 export default function AddCustomer() {
   const { customerMasterLoading, customerMaster } = useGetCustomerMaster();
-  const { customersLoading: loading, customers } = useGetCustomer();
+  const { usersLoading: loading, customers } = useGetCustomer();
   const isModal = customerMaster?.modal;
 
   const [list, setList] = useState<CustomerList | null>(null);

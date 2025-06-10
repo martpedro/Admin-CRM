@@ -34,7 +34,7 @@ export function useGetCustomer() {
   const memoizedValue = useMemo(
     () => ({
       customers: data?.customers as CustomerList[],
-      customersLoading: isLoading,
+      usersLoading: isLoading,
       customersError: error,
       customersValidating: isValidating,
       customersEmpty: !isLoading && !data?.customers?.length
