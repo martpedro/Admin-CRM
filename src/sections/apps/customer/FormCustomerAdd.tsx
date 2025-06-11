@@ -354,7 +354,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                         </FormControl>
                       </Stack>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
+                    {/* <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="customer-gender">Género</InputLabel>
                         <RadioGroup row aria-label="payment-card" {...getFieldProps('gender')}>
@@ -362,10 +362,10 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                           <FormControlLabel control={<Radio value={Gender.MALE} />} label={Gender.MALE} />
                         </RadioGroup>
                       </Stack>
-                    </Grid>
+                    </Grid> */}
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-status">Estado</InputLabel>
+                        <InputLabel htmlFor="customer-status">Asesor de ventas</InputLabel>
                         <FormControl fullWidth>
                           <Select
                             id="column-hiding"
@@ -375,7 +375,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                             input={<OutlinedInput id="select-column-hiding" placeholder="Ordenar por" />}
                             renderValue={(selected) => {
                               if (!selected) {
-                                return <Typography variant="subtitle1">Seleccionar estado</Typography>;
+                                return <Typography variant="subtitle1">Seleccionar un asesor</Typography>;
                               }
 
                               const selectedStatus = allStatus.filter((item) => item.value === Number(selected));
@@ -400,19 +400,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                         )}
                       </Stack>
                     </Grid>
-                    <Grid size={{ xs: 12, sm: 6 }}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-contact">Contacto</InputLabel>
-                        <TextField
-                          fullWidth
-                          id="customer-contact"
-                          placeholder="Ingrese el contacto"
-                          {...getFieldProps('contact')}
-                          error={Boolean(touched.contact && errors.contact)}
-                          helperText={touched.contact && errors.contact}
-                        />
-                      </Stack>
-                    </Grid>
+                   
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="customer-about">Acerca del cliente</InputLabel>
@@ -427,57 +415,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                           helperText={touched.about && errors.about}
                         />
                       </Stack>
-                    </Grid>
-                    <Grid size={12}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-skills">Habilidades</InputLabel>
-                        <Autocomplete
-                          multiple
-                          fullWidth
-                          id="customer-skills"
-                          options={skills}
-                          {...getFieldProps('skills')}
-                          getOptionLabel={(label) => label}
-                          onChange={(event, newValue) => {
-                            setFieldValue('skills', newValue);
-                          }}
-                          renderInput={(params) => <TextField {...params} name="skill" placeholder="Agregar habilidades" />}
-                          renderTags={(value, getTagProps) =>
-                            value.map((option, index) => (
-                              <Chip
-                                {...getTagProps({ index })}
-                                variant="combined"
-                                key={index}
-                                label={option}
-                                deleteIcon={<CloseCircle style={{ fontSize: '0.75rem' }} />}
-                                sx={{ color: 'text.primary' }}
-                              />
-                            ))
-                          }
-                        />
-                      </Stack>
-                    </Grid>
-                    <Grid size={12}>
-                      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <Stack sx={{ gap: 0.5 }}>
-                          <Typography variant="subtitle1">Hacer público el contacto</Typography>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Significa que cualquier persona que vea tu perfil podrá ver los detalles de contacto
-                          </Typography>
-                        </Stack>
-                        <FormControlLabel control={<Switch defaultChecked sx={{ mt: 0 }} />} label="" labelPlacement="start" />
-                      </Stack>
-                      <Divider sx={{ my: 2 }} />
-                      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <Stack sx={{ gap: 0.5 }}>
-                          <Typography variant="subtitle1">Disponible para contratar</Typography>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            Al activar esto, tus compañeros sabrán que estás disponible para nuevos proyectos
-                          </Typography>
-                        </Stack>
-                        <FormControlLabel control={<Switch sx={{ mt: 0 }} />} label="" labelPlacement="start" />
-                      </Stack>
-                    </Grid>
+                    </Grid>                   
                   </Grid>
                 </Grid>
               </Grid>
