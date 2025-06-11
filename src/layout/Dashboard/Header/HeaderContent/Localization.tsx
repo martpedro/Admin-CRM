@@ -47,6 +47,8 @@ export default function Localization() {
 
   const handleListItemClick = (lang: I18n) => {
     onChangeLocalization(lang);
+    console.log('Language changed to:', lang);
+    console.log('Current i18n:', i18n);
     setOpen(false);
   };
 
@@ -104,6 +106,19 @@ export default function Localization() {
                       [theme.breakpoints.down('md')]: { maxWidth: 250 }
                     })}
                   >
+                    <ListItemButton selected={i18n === 'es'} onClick={() => handleListItemClick('es')}>
+                      <ListItemText
+                        primary={
+                          <Grid container>
+                            <Typography sx={{ color: 'text.primary' }}>Español</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', ml: '8px' }}>
+                              (MX)
+                            </Typography>
+                          </Grid>
+                        }
+                      />
+                      
+                    </ListItemButton>
                     <ListItemButton selected={i18n === 'en'} onClick={() => handleListItemClick('en')}>
                       <ListItemText
                         primary={
@@ -115,6 +130,7 @@ export default function Localization() {
                           </Grid>
                         }
                       />
+                      
                     </ListItemButton>
                     <ListItemButton selected={i18n === 'fr'} onClick={() => handleListItemClick('fr')}>
                       <ListItemText

@@ -45,7 +45,7 @@ export enum Gender {
 
 const config: DefaultConfigProps = {
   fontFamily: `Inter var`,
-  i18n: 'en',
+  i18n: 'es',
   menuOrientation: MenuOrientation.HORIZONTAL,
   menuCaption: true,
   miniDrawer: false,

@@ -8,13 +8,13 @@ import support from './support';
 // types
 import { NavItemType } from 'types/menu';
 import Users from './Users';
-import Customer from './Customers';
-import Sales from './Sales';
+import customer from './Customers';
+import sales from './Sales';
 
 // ==============================|| MENU ITEMS ||============================== //
 
 const menuItems: { items: NavItemType[] } = {
-  items: [samplePage, Users, Customer, Sales]
+  items: [samplePage, Users, customer, sales]
 };
 
 export default menuItems;

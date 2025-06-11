@@ -21,6 +21,7 @@ import { NavItemType } from 'types/menu';
 
 export default function Navigation() {
   const downLG = useMediaQuery((theme) => theme.breakpoints.down('lg'));
+  console.log('Navigation component rendered', useConfig());
 
   const { menuOrientation } = useConfig();
   const { menuMaster } = useGetMenuMaster();

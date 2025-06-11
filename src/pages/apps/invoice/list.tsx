@@ -473,13 +473,11 @@ export default function List() {
     }
   ];
 
-
   let breadcrumbLinks = [{ title: 'home', to: APP_DEFAULT_PATH }, { title: 'invoice', to: '/apps/invoice/dashboard' }, { title: 'list' }];
-
 
   return (
     <>
-          {/* <Breadcrumbs custom heading="invoice-list" links={breadcrumbLinks} /> */}
+      {/* <Breadcrumbs custom heading="invoice-list" links={breadcrumbLinks} /> */}
 
       <Grid container spacing={GRID_COMMON_SPACING} sx={{ pb: 2 }}>
         <Grid size={{ xs: 12, md: 8 }}>
@@ -549,6 +547,33 @@ export default function List() {
             handleClose={handleClose}
           />
         </Grid>
+        <Tooltip title="Nueva cotizacion" placement="left">
+          <Box
+            sx={{
+              position: 'fixed',
+              bottom: 32,
+              right: 32,
+              zIndex: 1200
+            }}
+          >
+            <IconButton
+              color="primary"
+              size="large"
+              sx={{
+          bgcolor: 'primary.main',
+          color: 'white',
+          boxShadow: 3,
+          '&:hover': { bgcolor: 'primary.dark' }
+              }}
+              onClick={() => {
+          // Acción del botón flotante, por ejemplo, navegar a crear nueva factura
+          navigation('/sales/create');
+              }}
+            >
+              <Edit />
+            </IconButton>
+          </Box>
+        </Tooltip>
       </Grid>
     </>
   );

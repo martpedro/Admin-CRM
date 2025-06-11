@@ -13,7 +13,7 @@ const icons = {
 
 // ==============================|| MENU ITEMS - SAMPLE PAGE ||============================== //
 
-const Customer: NavItemType = {
+const customer: NavItemType = {
   id: 'customers',
   title: 'Clientes',
   type: 'group',
@@ -21,4 +21,4 @@ const Customer: NavItemType = {
   icon: icons.customer
 };
 
-export default Customer;
+export default customer;

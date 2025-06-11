@@ -13,12 +13,12 @@ const icons = {
 
 // ==============================|| MENU ITEMS - SAMPLE PAGE ||============================== //
 
-const Sales: NavItemType = {
+const sales: NavItemType = {
   id: 'sales',
-  title: 'Ventas',
+  title: 'sales',
   type: 'group',
-  url: '/sales/sales-list',
+  url: '/sales/invoice-list',
   icon: icons.invoice
 };
 
-export default Sales;
+export default sales;
