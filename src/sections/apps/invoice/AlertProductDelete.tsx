@@ -39,24 +39,24 @@ export default function AlertProductDelete({ title, open, handleClose }: Props) 
           </Avatar>
           <Stack sx={{ gap: 2 }}>
             <Typography variant="h4" align="center">
-              Are you sure you want to delete?
+              ¿Estás seguro de que deseas eliminar?
             </Typography>
             <Typography align="center">
-              By deleting
+              Al eliminarel producto
               <Typography variant="subtitle1" component="span">
                 {' '}
                 &quot;{title}&quot;{' '}
               </Typography>
-              product, Its details will also be removed from invoice.
+              , sus detalles también se eliminarán de la venta.
             </Typography>
           </Stack>
 
           <Stack direction="row" sx={{ gap: 2, width: 1 }}>
             <Button fullWidth onClick={() => handleClose(false)} color="secondary" variant="outlined">
-              Cancel
+              Cancelar
             </Button>
             <Button fullWidth color="error" variant="contained" onClick={() => handleClose(true)} autoFocus>
-              Delete
+              Eliminar
             </Button>
           </Stack>
         </Stack>

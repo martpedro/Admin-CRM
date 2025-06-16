@@ -146,7 +146,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
       invoice_detail: values.invoice_detail,
       notes: values.notes
     };
-
+    console.log('newList', newList);
     updateInvoice(newList.id, newList);
     openSnackbar({
       open: true,
@@ -198,7 +198,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
             <Grid container spacing={2}>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Stack sx={{ gap: 1 }}>
-                  <InputLabel>Invoice Id</InputLabel>
+                  <InputLabel>Folio</InputLabel>
                   <FormControl sx={{ width: 1 }}>
                     <TextField
                       required
@@ -214,7 +214,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Stack sx={{ gap: 1 }}>
-                  <InputLabel>Status</InputLabel>
+                  <InputLabel>Estado</InputLabel>
                   <FormControl sx={{ width: 1 }}>
                     <Select
                       value={values.status}
@@ -222,7 +222,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                       name="status"
                       renderValue={(selected) => {
                         if (selected.length === 0) {
-                          return <Box sx={{ color: 'secondary.400' }}>Select status</Box>;
+                          return <Box sx={{ color: 'secondary.400' }}>Selecciona estado</Box>;
                         }
                         return selected;
                       }}
@@ -230,11 +230,11 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                       error={Boolean(errors.status && touched.status)}
                     >
                       <MenuItem disabled value="">
-                        Select status
+                        Selecciona estado
                       </MenuItem>
-                      <MenuItem value="Paid">Paid</MenuItem>
-                      <MenuItem value="Unpaid">Unpaid</MenuItem>
-                      <MenuItem value="Cancelled">Cancelled</MenuItem>
+                      <MenuItem value="Paid">Pagada</MenuItem>
+                      <MenuItem value="Unpaid">No pagada</MenuItem>
+                      <MenuItem value="Cancelled">Cancelada</MenuItem>
                     </Select>
                   </FormControl>
                 </Stack>
@@ -242,7 +242,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Stack sx={{ gap: 1 }}>
-                  <InputLabel>Date</InputLabel>
+                  <InputLabel>Fecha</InputLabel>
                   <FormControl sx={{ width: 1 }} error={Boolean(touched.date && errors.date)}>
                     <LocalizationProvider dateAdapter={AdapterDateFns}>
                       <DatePicker format="dd/MM/yyyy" value={values.date} onChange={(newValue) => setFieldValue('date', newValue)} />
@@ -253,7 +253,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
               </Grid>
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Stack sx={{ gap: 1 }}>
-                  <InputLabel>Due Date</InputLabel>
+                  <InputLabel>Fecha de vencimiento</InputLabel>
                   <FormControl sx={{ width: 1 }} error={Boolean(touched.due_date && errors.due_date)}>
                     <LocalizationProvider dateAdapter={AdapterDateFns}>
                       <DatePicker
@@ -272,7 +272,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                   <Grid container spacing={2}>
                     <Grid size={{ xs: 12, sm: 8 }}>
                       <Stack sx={{ gap: 2 }}>
-                        <Typography variant="h5">From:</Typography>
+                        <Typography variant="h5">De:</Typography>
                         <Stack sx={{ width: 1 }}>
                           <Typography variant="subtitle1">{values?.cashierInfo?.name}</Typography>
                           <Typography color="secondary">{values?.cashierInfo?.address}</Typography>
@@ -290,7 +290,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                           onClick={() => handlerCustomerFrom(true)}
                           size="small"
                         >
-                          Change
+                          Cambiar
                         </Button>
                         <AddressModal
                           open={invoiceMaster.open}
@@ -307,7 +307,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                   <Grid container spacing={2}>
                     <Grid size={{ xs: 12, sm: 8 }}>
                       <Stack sx={{ gap: 2 }}>
-                        <Typography variant="h5">To:</Typography>
+                        <Typography variant="h5">Para:</Typography>
                         <Stack sx={{ width: 1 }}>
                           <Typography variant="subtitle1">{values?.customerInfo?.name}</Typography>
                           <Typography color="secondary">{values?.customerInfo?.address}</Typography>
@@ -325,7 +325,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                           variant="outlined"
                           onClick={() => handlerCustomerTo(true)}
                         >
-                          Add
+                          Agregar
                         </Button>
                         <AddressModal
                           open={invoiceMaster.isCustomerOpen}
@@ -342,7 +342,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
               </Grid>
 
               <Grid size={12}>
-                <Typography variant="h5">Detail</Typography>
+                <Typography variant="h5">Detalle</Typography>
               </Grid>
               <Grid size={12}>
                 <FieldArray
@@ -355,12 +355,18 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                             <TableHead>
                               <TableRow>
                                 <TableCell>#</TableCell>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Description</TableCell>
-                                <TableCell align="right">Qty</TableCell>
-                                <TableCell align="right">Price</TableCell>
-                                <TableCell align="right">Amount</TableCell>
-                                <TableCell align="center">Action</TableCell>
+                                <TableCell>Imagen</TableCell>
+                                <TableCell>Código de proveedor</TableCell>
+                                <TableCell>Código</TableCell>
+                                <TableCell>Especificaciones</TableCell>
+                                <TableCell>Tintas</TableCell>
+                                <TableCell>Tiempo de entrega</TableCell>
+                                <TableCell align="right">Cantidad</TableCell>
+                                <TableCell align="right">Costo</TableCell>
+                                <TableCell align="right">Impresión</TableCell>
+                                <TableCell align="right">Precio Unitario</TableCell>
+                                <TableCell align="right">Importe</TableCell>
+                                <TableCell align="center">Acción</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
@@ -372,9 +378,19 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                                     id={item.id}
                                     index={index}
                                     name={item.name}
+                                    
                                     description={item.description}
                                     qty={item.qty}
                                     price={item.price}
+                                    image={item.image}
+                                    supplier_code={item.supplier_code}
+                                    code={item.code}
+                                    specifications={item.specifications}
+                                    inks={item.inks}
+                                    delivery_time={item.delivery_time}
+                                    cost={item.cost}
+                                    print={item.print}
+                                    unit_price={item.unit_price}
                                     onDeleteItem={(index: number) => remove(index)}
                                     onEditItem={handleChange}
                                     Blur={handleBlur}
@@ -403,7 +419,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                             <Grid container justifyContent="space-between" spacing={2} sx={{ pt: 2.5, pb: 2.5 }}>
                               <Grid size={6}>
                                 <Stack sx={{ gap: 1 }}>
-                                  <InputLabel>Discount(%)</InputLabel>
+                                  <InputLabel>Descuento (%)</InputLabel>
                                   <TextField
                                     type="number"
                                     fullWidth
@@ -418,7 +434,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                               </Grid>
                               <Grid size={6}>
                                 <Stack sx={{ gap: 1 }}>
-                                  <InputLabel>Tax(%)</InputLabel>
+                                  <InputLabel>Impuesto (%)</InputLabel>
                                   <TextField
                                     type="number"
                                     fullWidth
@@ -435,21 +451,21 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                             <Grid size={12}>
                               <Stack sx={{ gap: 2 }}>
                                 <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-                                  <Typography sx={{ color: 'secondary.main' }}>Sub Total:</Typography>
+                                  <Typography sx={{ color: 'secondary.main' }}>Subtotal:</Typography>
                                   <Typography>{`${invoiceMaster?.country?.prefix} ${subtotal.toFixed(2)}`}</Typography>
                                 </Stack>
                                 <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-                                  <Typography sx={{ color: 'secondary.main' }}>Discount:</Typography>
+                                  <Typography sx={{ color: 'secondary.main' }}>Descuento:</Typography>
                                   <Typography variant="h6" sx={{ color: 'success.main' }}>
                                     {`${invoiceMaster?.country?.prefix} ${discountRate.toFixed(2)}`}
                                   </Typography>
                                 </Stack>
                                 <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-                                  <Typography color="secondary.main">Tax:</Typography>
+                                  <Typography color="secondary.main">Impuesto:</Typography>
                                   <Typography>{`${invoiceMaster?.country?.prefix} ${taxRate.toFixed(2)}`}</Typography>
                                 </Stack>
                                 <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-                                  <Typography variant="subtitle1">Grand Total:</Typography>
+                                  <Typography variant="subtitle1">Total:</Typography>
                                   <Typography variant="subtitle1">
                                     {total % 1 === 0
                                       ? invoiceMaster.country?.prefix + ' ' + total
@@ -467,10 +483,10 @@ function EditForm({ list, invoiceMaster }: FormProps) {
               </Grid>
               <Grid size={12}>
                 <Stack sx={{ gap: 1 }}>
-                  <InputLabel>Notes</InputLabel>
+                  <InputLabel>Notas</InputLabel>
                   <TextField
                     fullWidth
-                    placeholder="Notes"
+                    placeholder="Notas"
                     rows={3}
                     value={values.notes}
                     multiline
@@ -491,18 +507,18 @@ function EditForm({ list, invoiceMaster }: FormProps) {
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Stack sx={{ gap: 1 }}>
-                  <InputLabel>Set Currency*</InputLabel>
+                  <InputLabel>Moneda*</InputLabel>
                   <FormControl sx={{ width: { xs: 1, sm: 250 } }}>
                     <Autocomplete
                       id="country-select"
                       options={invoiceMaster.countries}
                       defaultValue={invoiceMaster.country}
                       getOptionLabel={(option) => option.label}
-                      value={values.country || null} // Controlled value for the Autocomplete
+                      value={values.country || null}
                       autoHighlight
                       clearIcon={null}
                       onChange={(event, value) => {
-                        setFieldValue('country', value); // Update Formik state
+                        setFieldValue('country', value);
                         selectCountry(value as CountryType);
                       }}
                       renderOption={(props, option) => (
@@ -526,8 +542,8 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                           <TextField
                             {...params}
                             name="country"
-                            placeholder="Select"
-                            value={values.country ? values.country.label : ''} // Controlled value for the TextField
+                            placeholder="Selecciona"
+                            value={values.country ? values.country.label : ''}
                             error={touched.country && Boolean(errors.country)}
                             helperText={
                               touched.country &&
@@ -535,7 +551,7 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                                 ? errors.country.join(', ')
                                 : typeof errors.country === 'string'
                                   ? errors.country
-                                  : 'Unknown error')
+                                  : 'Error desconocido')
                             }
                             sx={{ '.flagImg': { objectFit: 'contain' } }}
                             slotProps={{
@@ -574,10 +590,10 @@ function EditForm({ list, invoiceMaster }: FormProps) {
                     sx={{ color: 'secondary.dark' }}
                     onClick={() => handlerPreview(true)}
                   >
-                    Preview
+                    Vista previa
                   </Button>
                   <Button color="primary" variant="contained" type="submit">
-                    Update & Send
+                    Actualizar y enviar
                   </Button>
                   <InvoiceModal
                     isOpen={invoiceMaster.isOpen}

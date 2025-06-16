@@ -65,7 +65,7 @@ const MainRoutes = {
           path: 'sales',
           children: [
             {
-              path: 'sales-list',
+              path: 'invoice-list',
               element: <AppInvoiceList />,
               title: 'editar',
               

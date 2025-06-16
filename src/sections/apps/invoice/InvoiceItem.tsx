@@ -45,6 +45,16 @@ interface InvoiceItemProps {
   description: string;
   qty: number;
   price: number;
+
+  image: string;
+  supplier_code: string;
+  code: string;
+  specifications: string;
+  inks: string;
+  delivery_time: string;
+  cost: string;
+  print: string;
+  unit_price: string;
   onDeleteItem: (index: number) => void;
   onEditItem: (event: React.ChangeEvent<HTMLInputElement>) => void;
   index: number;
@@ -63,6 +73,16 @@ export default function InvoiceItem({
   description,
   qty,
   price,
+
+  image,
+  supplier_code,
+  code,
+  specifications,
+  inks,
+  delivery_time,
+  cost,
+  print,
+  unit_price,
   onDeleteItem,
   onEditItem,
   index,
@@ -80,50 +100,130 @@ export default function InvoiceItem({
     if (status) {
       onDeleteItem(index);
       openSnackbar({
-        open: true,
-        message: 'Product Deleted successfully',
-        anchorOrigin: { vertical: 'top', horizontal: 'right' },
-        variant: 'alert',
-        alert: { color: 'success' }
+      open: true,
+      message: 'Producto eliminado exitosamente',
+      anchorOrigin: { vertical: 'top', horizontal: 'right' },
+      variant: 'alert',
+      alert: { color: 'success' }
       } as SnackbarProps);
     }
   };
 
-  const Name = `invoice_detail[${index}].name`;
-  const touchedName = getIn(touched, Name);
-  const errorName = getIn(errors, Name);
-
+  const SupplierCode = `invoice_detail[${index}].supplier_code`;
+  const touchedName = getIn(touched, SupplierCode);
+  const errorName = getIn(errors, SupplierCode);
+  name = name || supplier_code || code || ''; // Asigna un valor por defecto si name es undefined
   const textFieldItem = [
     {
-      placeholder: 'Item name',
-      label: 'Item Name',
-      name: `invoice_detail.${index}.name`,
+      placeholder: 'Imagen',
+      label: 'Imagen',
+      name: `invoice_detail.${index}.image`,
+      type: 'file',
+      id: id + '_image',
+      value: image, // Asigna el valor correspondiente si existe
+      align: 'left'
+    },
+    {
+      placeholder: 'Código de proveedor',
+      label: 'Código de proveedor',
+      name: `invoice_detail.${index}.supplier_code`,
       type: 'text',
-      id: id + '_name',
-      value: name,
+      id: id + '_supplier_code',
+      value: supplier_code, // Asigna el valor correspondiente si existe
       errors: errorName,
       touched: touchedName,
       align: 'left'
     },
     {
-      placeholder: 'Description',
-      label: 'Description',
-      name: `invoice_detail.${index}.description`,
+      placeholder: 'Código',
+      label: 'Código',
+      name: `invoice_detail.${index}.code`,
       type: 'text',
-      id: id + '_description',
-      value: description,
+      id: id + '_code',
+      value: code, // Asigna el valor correspondiente si existe
       align: 'left'
     },
-    { placeholder: '', label: 'Qty', type: 'number', name: `invoice_detail.${index}.qty`, id: id + '_qty', value: qty, align: 'right' },
     {
-      placeholder: '',
-      label: 'price',
+      placeholder: 'Especificaciones',
+      label: 'Especificaciones',
+      name: `invoice_detail.${index}.specifications`,
+      type: 'text',
+      id: id + '_specifications',
+      value: specifications, // Asigna el valor correspondiente si existe
+      align: 'left'
+    },
+    {
+      placeholder: 'Tintas',
+      label: 'Tintas',
+      name: `invoice_detail.${index}.inks`,
+      type: 'text',
+      id: id + '_inks',
+      value: inks, // Asigna el valor correspondiente si existe
+      align: 'left'
+    },
+    {
+      placeholder: 'Tiempo de entrega',
+      label: 'Tiempo de entrega',
+      name: `invoice_detail.${index}.delivery_time`,
+      type: 'text',
+      id: id + '_delivery_time',
+      value: delivery_time, // Asigna el valor correspondiente si existe
+      align: 'left'
+    },
+    {
+      placeholder: 'Cantidad',
+      label: 'Cantidad',
+      name: `invoice_detail.${index}.qty`,
       type: 'number',
-      name: `invoice_detail.${index}.price`,
-      id: id + '_price',
-      value: price,
+      id: id + '_qty',
+      value: qty,
+      align: 'right'
+    },
+    {
+      placeholder: 'Costo',
+      label: 'Costo',
+      name: `invoice_detail.${index}.cost`,
+      type: 'number',
+      id: id + '_cost',
+      value: cost, // Asigna el valor correspondiente si existe
+      align: 'right'
+    },
+    {
+      placeholder: 'Impresión',
+      label: 'Impresión',
+      name: `invoice_detail.${index}.print`,
+      type: 'text',
+      id: id + '_print',
+      value: print, // Asigna el valor correspondiente si existe
+      align: 'left'
+    },
+    {
+      placeholder: 'Precio Unitario',
+      label: 'Precio Unitario',
+      name: `invoice_detail.${index}.unit_price`,
+      type: 'number',
+      id: id + '_unit_price',
+      value: unit_price, // Asigna el valor correspondiente si existe
       align: 'right'
     }
+    // {
+    //   placeholder: 'Acción',
+    //   label: 'Acción',
+    //   name: `invoice_detail.${index}.action`,
+    //   type: 'text',
+    //   id: id + '_action',
+    //   value: '', // Asigna el valor correspondiente si existe
+    //   align: 'left'
+    // },
+    // {
+    //   placeholder: 'Importe',
+    //   label: 'Importe',
+    //   name: `invoice_detail.${index}.amount`,
+    //   type: 'number',
+    //   id: id + '_amount',
+    //   value: '', // Asigna el valor correspondiente si existe
+    //   align: 'right'
+    // }
   ];
 
   return (
@@ -161,7 +261,7 @@ export default function InvoiceItem({
         </Stack>
       </TableCell>
       <TableCell align="center">
-        <Tooltip title="Remove Item">
+        <Tooltip title="Eliminar producto">
           <Button color="error" onClick={() => setOpen(true)} disabled={lastItem}>
             <Trash />
           </Button>
