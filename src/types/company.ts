@@ -7,4 +7,5 @@ export interface CompanyInfo {
   telefonos: string;
   whatsapp: string;
   pagina: string;
+  quotationLetter?: string;
 }

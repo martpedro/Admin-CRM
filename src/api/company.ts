@@ -15,7 +15,8 @@ export const companyApi = {
       direccion: c.Address || '',
       telefonos: c.Phones || '',
       whatsapp: c.WhatsApp || '',
-      pagina: c.WebPage || ''
+      pagina: c.WebPage || '',
+      quotationLetter: c.QuotationLetter || undefined
     }));
   },
   // Obtener una empresa por ID
@@ -29,7 +30,8 @@ export const companyApi = {
       direccion: c.Address || '',
       telefonos: c.Phones || '',
       whatsapp: c.WhatsApp || '',
-      pagina: c.WebPage || ''
+      pagina: c.WebPage || '',
+      quotationLetter: c.QuotationLetter || undefined
     };
   },
   // Crear empresa

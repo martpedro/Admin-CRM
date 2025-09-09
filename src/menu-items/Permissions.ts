@@ -18,6 +18,13 @@ const Permissions: NavItemType = {
   type: 'group',
   children: [
     {
+      id: 'roles-list',
+      title: 'Roles',
+      type: 'item',
+      url: '/permissions/roles',
+      icon: icons.permissions
+    },
+    {
       id: 'permissions-list',
       title: 'Gestión de Permisos',
       type: 'item',

@@ -316,7 +316,7 @@ export default function UserListPage() {
                   onClick={(e: MouseEvent<HTMLButtonElement>) => {
                     e.stopPropagation();
                     handleClose();
-                    setUserDeleteId(Number(row.original.id));
+                    setUserDeleteId(Number((row.original as any).Id ?? (row.original as any).id));
                   }}
                 >
                   <Trash />

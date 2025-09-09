@@ -1,7 +1,9 @@
 import { useEffect, useState, ChangeEvent } from 'react';
+import usePermissions from 'hooks/usePermissions';
 import { CompanyInfo } from 'types/company';
 import useSWR from 'swr';
 import companyApi from 'api/company';
+import roleApi, { RoleItem } from 'api/role';
 
 // material-ui
 import Autocomplete from '@mui/material/Autocomplete';
@@ -34,7 +36,6 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 
 // third-party
-import { merge } from 'lodash-es';
 import * as Yup from 'yup';
 import { useFormik, Form, FormikProvider } from 'formik';
 
@@ -45,6 +46,7 @@ import IconButton from 'components/@extended/IconButton';
 import CircularWithPath from 'components/@extended/progress/CircularWithPath';
 
 import { insertUser, updateUser } from 'api/user';
+import { useGetMenuPermissions, setUserMenus, getUserMenus, type MenuPermissionItem } from 'api/menu-permissions';
 import { openSnackbar } from 'api/snackbar';
 import { Gender } from 'config';
 import { ImagePath, getImageUrl } from 'utils/getImageUrl';
@@ -104,22 +106,21 @@ const skills = [
 ];
 
 // CONSTANT
-const getInitialValues = (user: UserList | null) => {
-  const newUser = {
+const getInitialValues = (user: any | null) => {
+  const base: any = {
+    id: 0,
     firstName: '',
     lastName: '',
     middleName: '',
     name: '',
     email: '',
-    age: 18,
     avatar: 1,
     gender: Gender.FEMALE,
     role: '',
-    fatherName: '',
+  letterasigned: '',
     orders: 0,
     progress: 50,
     status: 2,
-    letterasigned: '',
     orderStatus: '',
     contact: '',
     isInactive: false,
@@ -132,11 +133,20 @@ const getInitialValues = (user: UserList | null) => {
     date: ''
   };
 
-  if (user) {
-    return merge({}, newUser, user);
-  }
+  if (!user) return base;
 
-  return newUser;
+  // Mapear desde ApiUser si vienen esos campos
+  const mapped: any = { ...base };
+  mapped.id = user.Id ?? user.id ?? 0;
+  mapped.firstName = user.firstName ?? user.name ?? '';
+  mapped.lastName = user.lastName ?? user.LastName ?? '';
+  mapped.middleName = user.middleName ?? user.MotherLastName ?? '';
+  mapped.name = `${mapped.firstName} ${mapped.lastName}`.trim();
+  mapped.email = user.email ?? '';
+  mapped.contact = user.Phone ?? user.contact ?? '';
+  mapped.letterasigned = user.letterasigned ?? user.LetterAsign ?? '';
+  mapped.isInactive = user.isInactive ?? (user.isActive === false ? true : false);
+  return mapped;
 };
 
 const allStatus: StatusProps[] = [
@@ -148,6 +158,7 @@ const allStatus: StatusProps[] = [
 // ==============================|| CUSTOMER ADD / EDIT - FORM ||============================== //
 
 export default function FormUserAdd({ user, closeModal }: { user: UserList | null; closeModal: () => void }) {
+  const { canCreate, canUpdate, canDelete } = usePermissions();
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedImage, setSelectedImage] = useState<File | undefined>(undefined);
   const [avatar, setAvatar] = useState<string | undefined>(
@@ -158,6 +169,12 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
   const [empresa, setEmpresa] = useState<CompanyInfo | null>(null);
   // Obtener empresas desde el API
   const { data: empresas, isLoading: loadingEmpresas } = useSWR('empresas', companyApi.getAll);
+  // Roles desde el API
+  const { data: roles, isLoading: loadingRoles } = useSWR<RoleItem[]>('roles', () => roleApi.getAll(false));
+  // Menús
+  const { menus } = useGetMenuPermissions();
+  const [selectedMenus, setSelectedMenus] = useState<string[]>([]);
+  const [assignedMenuItems, setAssignedMenuItems] = useState<MenuPermissionItem[]>([]);
 
   useEffect(() => {
     if (selectedImage) {
@@ -168,6 +185,19 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
   useEffect(() => {
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    // Si editando, intentar cargar menús del usuario
+    const loadMenus = async () => {
+      if (!user) return;
+      try {
+  const list = await getUserMenus(Number((user as any).Id ?? user.id));
+  setAssignedMenuItems(list);
+  setSelectedMenus(list.map((m: any) => m.menuKey).filter(Boolean));
+      } catch {}
+    };
+    loadMenus();
+  }, [user]);
 
   const CustomerSchema = Yup.object().shape({
     firstName: Yup.string().max(255).required('El nombre es obligatorio'),
@@ -196,12 +226,16 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
         newUser.name = newUser.firstName + ' ' + newUser.lastName;
 
         if (user) {
-          updateUser(newUser.id!, newUser).then(() => {
+          const userId = (user as any)?.Id ?? newUser.id!;
+          updateUser(Number(userId), newUser, selectedImage).then(async (saved) => {
+            // Guardar menús si hay selección
+            if (selectedMenus.length) {
+              await setUserMenus(Number(userId), selectedMenus);
+            }
             console.log('newUser update', newUser);
-
             openSnackbar({
               open: true,
-              message: 'Cliente actualizado exitosamente.',
+              message: 'Usuario actualizado exitosamente.',
               variant: 'alert',
               alert: {
                 color: 'success'
@@ -211,12 +245,16 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
             closeModal();
           });
         } else {
-          console.log('newUser insert', newUser);
-          await insertUser(newUser).then(() => {
+      console.log('newUser insert', newUser);
+          await insertUser(newUser, selectedImage).then(async (saved: any) => {
+            const newId = Number(saved?.Id || saved?.id || 0);
+            if (newId && selectedMenus.length) {
+              await setUserMenus(newId, selectedMenus);
+            }
 
             openSnackbar({
               open: true,
-              message: 'Cliente agregado exitosamente.',
+        message: 'Usuario agregado exitosamente.',
               variant: 'alert',
               alert: {
                 color: 'success'
@@ -246,14 +284,14 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
       <FormikProvider value={formik}>
         <LocalizationProvider dateAdapter={AdapterDateFns}>
           <Form autoComplete="off" noValidate onSubmit={handleSubmit}>
-            <DialogTitle>{user ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
+            <DialogTitle>{user ? 'Editar Usuario' : 'Nuevo Usuario'}</DialogTitle>
             <Divider />
             <DialogContent sx={{ p: 2.5 }}>
               <Grid container spacing={3}>
                 <Grid size={{ xs: 12, md: 3 }}>
                   <Stack direction="row" sx={{ justifyContent: 'center', mt: 3 }}>
                     <FormLabel
-                      htmlFor="change-avtar"
+                      htmlFor="change-avatar"
                       sx={{
                         position: 'relative',
                         borderRadius: '50%',
@@ -296,7 +334,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                 </Grid>
                 <Grid size={{ xs: 12, md: 8 }}>
                   <Grid container spacing={3}>
-                    {/* Sección de información de la empresa */}
+                    {/* Empresa: solo Select */}
                     <Grid size={12}>
                       <Stack sx={{ gap: 1, mb: 2 }}>
                         <InputLabel htmlFor="empresa-select">Empresa</InputLabel>
@@ -306,6 +344,9 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                           onChange={e => {
                             const found = empresas?.find(emp => emp.id === Number(e.target.value));
                             setEmpresa(found || null);
+                            if (found?.quotationLetter) {
+                              setFieldValue('letterasigned', String(found.quotationLetter).toUpperCase());
+                            }
                           }}
                           displayEmpty
                           disabled={loadingEmpresas}
@@ -319,46 +360,6 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                         </Select>
                       </Stack>
                     </Grid>
-                    {empresa && (
-                      <>
-                        <Grid size={12}>
-                          <Stack sx={{ gap: 1 }}>
-                            <InputLabel>Razón Social</InputLabel>
-                            <TextField fullWidth value={empresa.razonSocial} InputProps={{ readOnly: true }} />
-                          </Stack>
-                        </Grid>
-                        <Grid size={12}>
-                          <Stack sx={{ gap: 1 }}>
-                            <InputLabel>RFC</InputLabel>
-                            <TextField fullWidth value={empresa.rfc} InputProps={{ readOnly: true }} />
-                          </Stack>
-                        </Grid>
-                        <Grid size={12}>
-                          <Stack sx={{ gap: 1 }}>
-                            <InputLabel>Dirección</InputLabel>
-                            <TextField fullWidth value={empresa.direccion} InputProps={{ readOnly: true }} />
-                          </Stack>
-                        </Grid>
-                        <Grid size={12}>
-                          <Stack sx={{ gap: 1 }}>
-                            <InputLabel>Teléfonos</InputLabel>
-                            <TextField fullWidth value={empresa.telefonos} InputProps={{ readOnly: true }} />
-                          </Stack>
-                        </Grid>
-                        <Grid size={12}>
-                          <Stack sx={{ gap: 1 }}>
-                            <InputLabel>WhatsApp</InputLabel>
-                            <TextField fullWidth value={empresa.whatsapp} InputProps={{ readOnly: true }} />
-                          </Stack>
-                        </Grid>
-                        <Grid size={12}>
-                          <Stack sx={{ gap: 1 }}>
-                            <InputLabel>Página</InputLabel>
-                            <TextField fullWidth value={empresa.pagina} InputProps={{ readOnly: true }} />
-                          </Stack>
-                        </Grid>
-                      </>
-                    )}
                     <Grid size={{ xs: 12, sm: 12 }}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-firstName">Nombre</InputLabel>
@@ -368,7 +369,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                           placeholder="Ingrese el nombre"
                           {...getFieldProps('firstName')}
                           error={Boolean(touched.firstName && errors.firstName)}
-                          helperText={touched.firstName && errors.firstName}
+                          helperText={touched.firstName && typeof errors.firstName === 'string' ? errors.firstName : undefined}
                         />
                       </Stack>
                     </Grid>
@@ -381,7 +382,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                           placeholder="Ingrese el apellido"
                           {...getFieldProps('lastName')}
                           error={Boolean(touched.lastName && errors.lastName)}
-                          helperText={touched.lastName && errors.lastName}
+                          helperText={touched.lastName && typeof errors.lastName === 'string' ? errors.lastName : undefined}
                         />
                       </Stack>
                     </Grid>
@@ -395,7 +396,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                           placeholder="Ingrese el apellido"
                           {...getFieldProps('middleName')}
                           error={Boolean(touched.middleName && errors.middleName)}
-                          helperText={touched.middleName && errors.middleName}
+                          helperText={touched.middleName && typeof errors.middleName === 'string' ? errors.middleName : undefined}
                         />
                       </Stack>
                     </Grid>
@@ -408,7 +409,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                           placeholder="Ingrese el correo electrónico"
                           {...getFieldProps('email')}
                           error={Boolean(touched.email && errors.email)}
-                          helperText={touched.email && errors.email}
+                          helperText={touched.email && typeof errors.email === 'string' ? errors.email : undefined}
                         />
                       </Stack>
                     </Grid>
@@ -431,7 +432,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                           }}
                           value={formik.values.letterasigned}
                           error={Boolean(touched.letterasigned && errors.letterasigned)}
-                          helperText={touched.letterasigned && errors.letterasigned}
+                          helperText={touched.letterasigned && typeof (errors as any).letterasigned === 'string' ? (errors as any).letterasigned : undefined}
                         />
                       </Stack>
                     </Grid>
@@ -444,39 +445,66 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                         </RadioGroup>
                       </Stack>
                     </Grid> */}
+                    {/* Menús visibles */}
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <Stack sx={{ gap: 1 }}>
+                        <InputLabel htmlFor="user-menus">Menús habilitados</InputLabel>
+                        <Select
+                          id="user-menus"
+                          multiple
+                          value={selectedMenus}
+                          onChange={(e) => setSelectedMenus(typeof e.target.value === 'string' ? e.target.value.split(',') : (e.target.value as string[]))}
+                          input={<OutlinedInput id="select-menus" placeholder="Seleccionar menús" />}
+                          renderValue={(selected) => {
+                            const keys = selected as string[];
+                            return keys.map((k) => menus?.find((m: any) => m.menuKey === k)?.menuName || k).join(', ');
+                          }}
+                        >
+                          {(menus || []).map((m: any) => (
+                            <MenuItem key={m.id} value={m.menuKey}>
+                              <ListItemText primary={`${m.menuName}`} secondary={m.menuPath} />
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        {/* Vista de menús asignados en backend */}
+                        {user && assignedMenuItems.length > 0 && (
+                          <Stack sx={{ gap: 1 }}>
+                            <InputLabel>Menús asignados (actuales)</InputLabel>
+                            <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                              {assignedMenuItems.map((m) => (
+                                <Chip key={m.id} size="small" variant="outlined" label={`${m.menuName}`} />
+                              ))}
+                            </Stack>
+                          </Stack>
+                        )}
+                      </Stack>
+                    </Grid>
                     <Grid size={6}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-role">Rol</InputLabel>
                         <FormControl fullWidth>
                           <Select
-                            id="column-hiding"
+                            id="user-role"
                             displayEmpty
-                            {...getFieldProps('role')}
-                            onChange={(event: SelectChangeEvent<string>) => setFieldValue('role', event.target.value as string)}
-                            input={<OutlinedInput id="select-column-hiding" placeholder="Ordenar por" />}
+                            value={(formik.values as any).profile || ''}
+                            onChange={(event: SelectChangeEvent<string | number>) => setFieldValue('profile', Number(event.target.value))}
+                            input={<OutlinedInput id="select-role" placeholder="Seleccionar rol" />}
                             renderValue={(selected) => {
-                              if (!selected) {
-                                return <Typography variant="subtitle1">Seleccionar Rol</Typography>;
-                              }
-
-                              const selectedStatus = allStatus.filter((item) => item.value === Number(selected));
-                              return (
-                                <Typography variant="subtitle2">
-                                  {selectedStatus.length > 0 ? selectedStatus[0].label : 'Pendiente'}
-                                </Typography>
-                              );
+                              if (!selected) return <Typography variant="subtitle1">Seleccionar Rol</Typography>;
+                              const r = roles?.find((it) => it.id === Number(selected));
+                              return <Typography variant="subtitle2">{r?.name || 'Rol'}</Typography>;
                             }}
                           >
-                            {allStatus.map((column: StatusProps) => (
-                              <MenuItem key={column.value} value={column.value}>
-                                <ListItemText primary={column.label} />
+                            {roles?.map((r) => (
+                              <MenuItem key={r.id} value={r.id}>
+                                <ListItemText primary={r.name} />
                               </MenuItem>
                             ))}
                           </Select>
                         </FormControl>
-                        {touched.role && errors.role && (
+                        {touched.role && typeof errors.role === 'string' && (
                           <FormHelperText error id="standard-weight-helper-text-email-login" sx={{ pl: 1.75 }}>
-                            {errors.role}
+                            {String(errors.role)}
                           </FormHelperText>
                         )}
                       </Stack>
@@ -608,8 +636,12 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                     <Button color="error" onClick={closeModal}>
                       Cancel
                     </Button>
-                    <Button type="submit" variant="contained" disabled={isSubmitting}>
-                      {user ? 'Edit' : 'Add'}
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isSubmitting || (user ? !canUpdate('user') : !canCreate('user'))}
+                    >
+                      {user ? 'Editar' : 'Agregar'}
                     </Button>
                   </Stack>
                 </Grid>
@@ -618,7 +650,9 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
           </Form>
         </LocalizationProvider>
       </FormikProvider>
-      {user && <AlertUserDelete id={user.id!} title={user.name} open={openAlert} handleClose={handleAlertClose} />}
+      {user && canDelete('user') && (
+        <AlertUserDelete id={Number(((user as any).Id ?? user.id) || 0)} title={user.name} open={openAlert} handleClose={handleAlertClose} />
+      )}
     </>
   );
 }

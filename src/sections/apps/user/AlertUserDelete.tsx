@@ -31,7 +31,7 @@ export default function AlertUserDelete({ id, title, open, handleClose }: Props)
     await deleteUser(id).then(() => {
       openSnackbar({
         open: true,
-        message: 'User deleted successfully',
+        message: 'Usuario eliminado correctamente',
         anchorOrigin: { vertical: 'top', horizontal: 'right' },
         variant: 'alert',
         alert: {
@@ -59,24 +59,24 @@ export default function AlertUserDelete({ id, title, open, handleClose }: Props)
           </Avatar>
           <Stack sx={{ gap: 2 }}>
             <Typography variant="h4" align="center">
-              Are you sure you want to delete?
+              ¿Seguro que deseas eliminar?
             </Typography>
             <Typography align="center">
-              By deleting
+              Al eliminar
               <Typography variant="subtitle1" component="span">
                 {' '}
                 &quot;{title}&quot;{' '}
               </Typography>
-              user, all task assigned to that user will also be deleted.
+              el usuario, todas las tareas asignadas también serán eliminadas.
             </Typography>
           </Stack>
 
           <Stack direction="row" sx={{ gap: 2, width: 1 }}>
             <Button fullWidth onClick={handleClose} color="secondary" variant="outlined">
-              Cancel
+              Cancelar
             </Button>
             <Button fullWidth color="error" variant="contained" onClick={deletehandler} autoFocus>
-              Delete
+              Eliminar
             </Button>
           </Stack>
         </Stack>

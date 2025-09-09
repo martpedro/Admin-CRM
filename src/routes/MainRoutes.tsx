@@ -19,6 +19,7 @@ const AppCustomerList = Loadable(lazy(() => import('pages/apps/customer/list')))
 
 const AppUserList = Loadable(lazy(() => import('pages/apps/user/list')));
 const AppPermissionsList = Loadable(lazy(() => import('pages/apps/permissions/list')));
+const AppRolesList = Loadable(lazy(() => import('pages/apps/roles/list')));
 const PermissionsTeams = Loadable(lazy(() => import('sections/apps/permissions/teams')));
 const PermissionsAssign = Loadable(lazy(() => import('pages/apps/permissions/assign')));
 
@@ -69,6 +70,10 @@ const MainRoutes = {
             {
               path: 'list',
               element: <AppPermissionsList />
+            },
+            {
+              path: 'roles',
+              element: <AppRolesList />
             },
             {
               path: 'teams',

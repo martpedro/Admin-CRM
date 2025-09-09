@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import usePermissions from 'hooks/usePermissions';
 import { useFormik, Form, FormikProvider } from 'formik';
 import * as Yup from 'yup';
 
@@ -20,6 +21,7 @@ const Schema = Yup.object().shape({
 });
 
 export default function FormCompany({ initial, onSubmit }: { initial?: Partial<CompanyInfo>; onSubmit: (data: Partial<CompanyInfo>) => void }) {
+  const { canCreate, canUpdate } = usePermissions();
   const formik = useFormik({
     initialValues: {
       razonSocial: initial?.razonSocial || '',
@@ -78,7 +80,15 @@ export default function FormCompany({ initial, onSubmit }: { initial?: Partial<C
           </Grid>
           <Grid size={12}>
             <Stack direction="row" sx={{ justifyContent: 'flex-end', gap: 2 }}>
-              <Button type="submit" variant="contained" disabled={isSubmitting}>Guardar</Button>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={
+                  isSubmitting || (initial?.id ? !canUpdate('company') : !canCreate('company'))
+                }
+              >
+                Guardar
+              </Button>
             </Stack>
           </Grid>
         </Grid>

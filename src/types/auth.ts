@@ -21,6 +21,8 @@ export interface AuthProps {
   isInitialized?: boolean;
   user?: UserProfile | null;
   token?: string | null;
+  permissions?: string[];
+  menus?: string[]; // menu paths permitidos
 }
 
 export interface AuthActionProps {
@@ -32,6 +34,8 @@ export type JWTContextType = {
   isLoggedIn: boolean;
   isInitialized?: boolean;
   user?: UserProfile | null | undefined;
+  permissions?: string[];
+  menus?: string[];
   logout: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;

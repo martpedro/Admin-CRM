@@ -23,12 +23,14 @@ const auth = (state = initialState, action: AuthActionProps) => {
       };
     }
     case LOGIN: {
-      const { user } = action.payload!;
+      const { user, permissions, menus } = action.payload!;
       return {
         ...state,
         isLoggedIn: true,
         isInitialized: true,
-        user
+        user,
+        permissions,
+        menus
       };
     }
     case LOGOUT: {

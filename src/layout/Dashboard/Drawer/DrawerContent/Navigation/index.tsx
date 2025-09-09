@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useState, useContext } from 'react';
 
 // material-ui
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -13,6 +13,7 @@ import { useGetMenuMaster } from 'api/menu';
 import { MenuOrientation, HORIZONTAL_MAX_ITEM } from 'config';
 import useConfig from 'hooks/useConfig';
 import menuItems from 'menu-items';
+import JWTContext from 'contexts/JWTContext';
 
 // types
 import { NavItemType } from 'types/menu';
@@ -33,6 +34,19 @@ export default function Navigation() {
 
   const isHorizontal = menuOrientation === MenuOrientation.HORIZONTAL && !downLG;
 
+  // Filtrado por menús permitidos
+  const auth = useContext(JWTContext);
+  const hasFilter = Array.isArray(auth?.menus);
+  const allowedMenuPaths = new Set((hasFilter ? (auth?.menus as string[]) : []));
+  const filterByAllowed = (item: NavItemType): boolean => {
+    if (!hasFilter) return true; // si no hay dato del backend aún, mostrar todo
+    if (item.url && allowedMenuPaths.has(item.url)) return true;
+    if (item.children && item.children.length) {
+      return item.children.some((c) => filterByAllowed(c));
+    }
+    return false;
+  };
+
   const lastItem = isHorizontal ? HORIZONTAL_MAX_ITEM : null;
   let lastItemIndex = menuItems.items.length - 1;
   let remItems: NavItemType[] = [];
@@ -51,7 +65,10 @@ export default function Navigation() {
     }));
   }
 
-  const navGroups = menuItems.items.slice(0, lastItemIndex + 1).map((item) => {
+  const navGroups = menuItems.items
+    .slice(0, lastItemIndex + 1)
+    .filter((item) => filterByAllowed(item))
+    .map((item) => {
     switch (item.type) {
       case 'group':
         if (item.url && item.id !== lastItemId) {
@@ -72,9 +89,12 @@ export default function Navigation() {
             selectedLevel={selectedLevel}
             selectedItems={selectedItems}
             lastItem={lastItem!}
-            remItems={remItems}
+            remItems={remItems.filter((ri) => !ri.elements || ri.elements.some((e) => filterByAllowed(e)))}
             lastItemId={lastItemId}
-            item={item}
+            item={{
+              ...item,
+              children: item.children?.filter((c) => filterByAllowed(c))
+            }}
           />
           
         );

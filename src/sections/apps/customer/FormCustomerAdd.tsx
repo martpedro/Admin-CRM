@@ -1,4 +1,5 @@
 import { useEffect, useState, ChangeEvent } from 'react';
+import usePermissions from 'hooks/usePermissions';
 
 // material-ui
 import Autocomplete from '@mui/material/Autocomplete';
@@ -146,6 +147,7 @@ const customerClassifications = [
 // ==============================|| CUSTOMER ADD / EDIT - FORM ||============================== //
 
 export default function FormCustomerAdd({ customer, closeModal }: { customer: CustomerList | null; closeModal: () => void }) {
+  const { canCreate, canUpdate, canDelete } = usePermissions();
   const [loading, setLoading] = useState<boolean>(true);
   const [salesAdvisors, setSalesAdvisors] = useState<Array<{value: number, label: string, profile: string}>>([]);
   const [loadingAdvisors, setLoadingAdvisors] = useState<boolean>(false);
@@ -528,7 +530,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
             <DialogActions sx={{ p: 2.5 }}>
               <Grid container sx={{ justifyContent: 'space-between', alignItems: 'center', width: 1 }}>
                 <Grid>
-                  {customer && (
+                  {customer && canDelete('customer') && (
                     <Tooltip title="Eliminar cliente" placement="top">
                       <IconButton onClick={() => setOpenAlert(true)} size="large" color="error">
                         <Trash variant="Bold" />
@@ -541,7 +543,11 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                     <Button color="error" onClick={closeModal}>
                       Cancelar
                     </Button>
-                    <Button type="submit" variant="contained" disabled={isSubmitting}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={isSubmitting || (customer ? !canUpdate('customer') : !canCreate('customer'))}
+                    >
                       {customer ? 'Editar' : 'Agregar'}
                     </Button>
                   </Stack>
@@ -551,7 +557,9 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
           </Form>
         </LocalizationProvider>
       </FormikProvider>
-      {customer && <AlertCustomerDelete id={customer.Id!} title={customer.Name || customer.name || ''} open={openAlert} handleClose={handleAlertClose} />}
+      {customer && canDelete('customer') && (
+        <AlertCustomerDelete id={customer.Id!} title={customer.Name || customer.name || ''} open={openAlert} handleClose={handleAlertClose} />
+      )}
     </>
   );
 }
