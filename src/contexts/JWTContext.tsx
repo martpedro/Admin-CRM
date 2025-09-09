@@ -58,9 +58,19 @@ export const JWTProvider = ({ children }: { children: React.ReactElement }) => {
       try {
         const serviceToken = window.localStorage.getItem('serviceToken');
         if (serviceToken && verifyToken(serviceToken)) {
+          // First set the session to configure axios defaults
           setSession(serviceToken);
-          const response = await axios.get('/api/account/me');
-          const { user } = response.data;
+          
+          // Then make the API call with explicit headers as backup
+          const response = await axios.get('/api/account/me', {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceToken}`
+            }
+          });
+          const { Message } = response.data;
+          const user = Message?.user || Message; // Handle both { Message: { user: {...} } } and { Message: {...} }
+          
           dispatch({
             type: LOGIN,
             payload: {
@@ -85,8 +95,9 @@ export const JWTProvider = ({ children }: { children: React.ReactElement }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await axios.post('/api/account/login', { email, password });
-    const { serviceToken, user } = response.data;
+    const response = await axios.post('api/Auth/signIn', { email, password });
+    const { Message: { serviceToken, user } } = response.data;
+
     setSession(serviceToken);
     dispatch({
       type: LOGIN,
@@ -107,7 +118,7 @@ export const JWTProvider = ({ children }: { children: React.ReactElement }) => {
       firstName,
       lastName
     });
-    let users = response.data;
+    let users = response.data.Message;
 
     if (window.localStorage.getItem('users') !== undefined && window.localStorage.getItem('users') !== null) {
       const localUsers = window.localStorage.getItem('users');

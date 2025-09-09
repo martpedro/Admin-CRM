@@ -217,7 +217,7 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
                     <Grid size={12}>
                       <MainCard title="Skills">
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', listStyle: 'none', p: 0.5, m: 0 }} component="ul">
-                          {customer.skills.map((skill: string, index: number) => (
+                          {customer.skills?.map((skill: string, index: number) => (
                             <ListItem disablePadding key={index} sx={{ width: 'auto', pr: 0.75, pb: 0.75 }}>
                               <Chip color="secondary" variant="outlined" size="small" label={skill} />
                             </ListItem>
@@ -270,7 +270,7 @@ export default function CustomerPreview({ customer, open, onClose, editCustomer 
           </DialogActions>
         </Box>
       </Dialog>
-      <AlertCustomerDelete id={customer.id!} title={customer.name} open={openAlert} handleClose={handleClose} />
+      <AlertCustomerDelete id={customer.Id!} title={customer.Name} open={openAlert} handleClose={handleClose} />
     </>
   );
 }

@@ -49,7 +49,7 @@ import {
   TablePagination
 } from 'components/third-party/react-table';
 
-import EmptyReactTable from 'pages/tables/react-table/empty';
+import EmptyReactTable from 'components/EmptyReactTable';
 import AlertUserDelete from 'sections/apps/user/AlertUserDelete';
 import UserModal from 'sections/apps/user/UserModal';
 import UserView from 'sections/apps/user/UserView';
@@ -72,20 +72,13 @@ interface Props {
 // ==============================|| REACT TABLE - LIST ||============================== //
 
 function ReactTable({ data, columns, modalToggler }: Props) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'id', desc: false }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState('');
-  const sortBy = { id: 'id', desc: false };
-  const [statusFilter, setStatusFilter] = useState<string | number>('');
-
-  const filteredData = useMemo(() => {
-    if (statusFilter === '') return data;
-    return data.filter((customer) => customer.status === statusFilter);
-  }, [statusFilter, data]);
 
   const table = useReactTable({
-    data: filteredData,
+    data,
     columns,
     state: {
       columnFilters,
@@ -98,7 +91,6 @@ function ReactTable({ data, columns, modalToggler }: Props) {
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
     onColumnFiltersChange: setColumnFilters,
-    getRowCanExpand: () => true,
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getCoreRowModel: getCoreRowModel(),
@@ -121,49 +113,34 @@ function ReactTable({ data, columns, modalToggler }: Props) {
   return (
     <MainCard content={false}>
       <Stack
-      direction={{ xs: 'column', sm: 'row' }}
-      sx={(theme) => ({
-        gap: 2,
-        justifyContent: 'space-between',
-        p: 3,
-        [theme.breakpoints.down('sm')]: { '& .MuiOutlinedInput-root, & .MuiFormControl-root': { width: '100%' } }
-      })}
+        direction={{ xs: 'column', sm: 'row' }}
+        sx={(theme) => ({
+          gap: 2,
+          justifyContent: 'space-between',
+          p: 3,
+          [theme.breakpoints.down('sm')]: { '& .MuiOutlinedInput-root, & .MuiFormControl-root': { width: '100%' } }
+        })}
       >
-      <DebouncedInput
-        value={globalFilter ?? ''}
-        onFilterChange={(value) => setGlobalFilter(String(value))}
-        placeholder={`Buscar en ${data.length} registros...`}
-      />
-
-      <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2, alignItems: 'center' }}>
-        <Select
-        value={statusFilter}
-        onChange={(event) => setStatusFilter(event.target.value)}
-        displayEmpty
-        inputProps={{ 'aria-label': 'Filtro de estado' }}
-        >
-        <MenuItem value="">Todos los estados</MenuItem>
-        <MenuItem value={1}>Verificado</MenuItem>
-        <MenuItem value={2}>Pendiente</MenuItem>
-        <MenuItem value={3}>Rechazado</MenuItem>
-        </Select>
-        <SelectColumnSorting sortBy={sortBy.id} {...{ getState: table.getState, getAllColumns: table.getAllColumns, setSorting }} />
-        <Stack direction="row" sx={{ gap: 2, alignItems: 'center' }}>
-        <Button variant="contained" startIcon={<Add />} onClick={modalToggler} size="large">
-          Agregar usuario
-        </Button>
-        <CSVExport
-          {...{
-          data:
-            table.getSelectedRowModel().flatRows.map((row) => row.original).length === 0
-            ? data
-            : table.getSelectedRowModel().flatRows.map((row) => row.original),
-          headers,
-          filename: 'lista-clientes.csv'
-          }}
+        <DebouncedInput
+          value={globalFilter ?? ''}
+          onFilterChange={(value) => setGlobalFilter(String(value))}
+          placeholder={`Buscar en ${data.length} registros...`}
         />
+        <Stack direction="row" sx={{ gap: 2, alignItems: 'center' }}>
+          <Button variant="contained" startIcon={<Add />} onClick={modalToggler} size="large">
+            Agregar usuario
+          </Button>
+          <CSVExport
+            {...{
+              data:
+                table.getSelectedRowModel().flatRows.map((row) => row.original).length === 0
+                  ? data
+                  : table.getSelectedRowModel().flatRows.map((row) => row.original),
+              headers,
+              filename: 'lista-clientes.csv'
+            }}
+          />
         </Stack>
-      </Stack>
       </Stack>
       <Stack>
       <RowSelection selected={Object.keys(rowSelection).length} />
@@ -203,28 +180,13 @@ function ReactTable({ data, columns, modalToggler }: Props) {
         </TableHead>
         <TableBody>
           {table.getRowModel().rows.map((row) => (
-          <Fragment key={row.id}>
-            <TableRow>
-            {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id} {...cell.column.columnDef.meta}>
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </TableCell>
-            ))}
+            <TableRow key={row.id}>
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id} {...cell.column.columnDef.meta}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
             </TableRow>
-            {row.getIsExpanded() && (
-            <TableRow
-              sx={(theme) => ({
-              bgcolor: alpha(theme.palette.primary.lighter, 0.1),
-              '&:hover': { bgcolor: `${alpha(theme.palette.primary.lighter, 0.1)} !important` },
-              overflow: 'hidden'
-              })}
-            >
-              <TableCell colSpan={row.getVisibleCells().length} sx={{ p: 2.5, overflow: 'hidden' }}>
-              <UserView data={row.original} />
-              </TableCell>
-            </TableRow>
-            )}
-          </Fragment>
           ))}
         </TableBody>
         </Table>
@@ -249,7 +211,7 @@ function ReactTable({ data, columns, modalToggler }: Props) {
 // ==============================|| CUSTOMER LIST ||============================== //
 
 export default function UserListPage() {
-  const { UsersLoading: loading, Users: lists } = useGetUser();
+  const { usersLoading: loading, users: lists } = useGetUser();
 
   const [open, setOpen] = useState<boolean>(false);
 
@@ -286,83 +248,55 @@ export default function UserListPage() {
         )
       },
       {
-        header: '#',
-        accessorKey: 'id',
+        header: 'ID',
+        accessorKey: 'Id',
         meta: {
           className: 'cell-center'
         }
       },
       {
-        header: 'User Name',
-        accessorKey: 'name',
-        cell: ({ row, getValue }) => (
-          <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center' }}>
-            <Avatar
-              alt="Avatar"
-              size="sm"
-              src={getImageUrl(`avatar-${!row.original.avatar ? 1 : row.original.avatar}.png`, ImagePath.USERS)}
-            />
-            <Stack>
-              <Typography variant="subtitle1">{getValue() as string}</Typography>
-              <Typography sx={{ color: 'text.secondary' }}>{row.original.email as string}</Typography>
-            </Stack>
-          </Stack>
-        )
+        header: 'Nombre',
+        accessorKey: 'name'
       },
       {
-        header: 'Contact',
-        accessorKey: 'contact',
-        cell: ({ getValue }) => <PatternFormat displayType="text" format="+1 (###) ###-####" mask="_" defaultValue={getValue() as number} />
+        header: 'Apellido Paterno',
+        accessorKey: 'LastName'
       },
       {
-        header: 'Age',
-        accessorKey: 'age',
-        meta: {
-          className: 'cell-right'
-        }
+        header: 'Apellido Materno',
+        accessorKey: 'MotherLastName'
       },
       {
-        header: 'Country',
-        accessorKey: 'country'
+        header: 'Teléfono',
+        accessorKey: 'Phone'
       },
       {
-        header: 'Status',
-        accessorKey: 'status',
-        cell: (cell) => {
-          switch (cell.getValue()) {
-            case 3:
-              return <Chip color="error" label="Rejected" size="small" variant="light" />;
-            case 1:
-              return <Chip color="success" label="Verified" size="small" variant="light" />;
-            case 2:
-            default:
-              return <Chip color="info" label="Pending" size="small" variant="light" />;
-          }
-        }
+        header: 'Letra Asignada',
+        accessorKey: 'LetterAsign'
       },
       {
-        header: 'Actions',
+        header: 'Perfil',
+        accessorKey: 'profile'
+      },
+      {
+        header: 'Correo',
+        accessorKey: 'email'
+      },
+      {
+        header: 'Activo',
+        accessorKey: 'isActive',
+        cell: ({ getValue }) => getValue() ? 'Sí' : 'No'
+      },
+      {
+        header: 'Acciones',
         meta: {
           className: 'cell-center'
         },
         disableSortBy: true,
         cell: ({ row }) => {
-          const collapseIcon =
-            row.getCanExpand() && row.getIsExpanded() ? (
-              <Box component="span" sx={{ color: 'error.main' }}>
-                <Add style={{ transform: 'rotate(45deg)' }} />
-              </Box>
-            ) : (
-              <Eye />
-            );
           return (
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'center' }}>
-              <Tooltip title="View">
-                <IconButton color="secondary" onClick={row.getToggleExpandedHandler()}>
-                  {collapseIcon}
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Edit">
+              <Tooltip title="Editar">
                 <IconButton
                   color="primary"
                   sx={(theme) => ({ ':hover': { ...theme.applyStyles('dark', { color: 'text.primary' }) } })}
@@ -375,7 +309,7 @@ export default function UserListPage() {
                   <Edit />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Delete">
+              <Tooltip title="Eliminar">
                 <IconButton
                   sx={(theme) => ({ ':hover': { ...theme.applyStyles('dark', { color: 'text.primary' }) } })}
                   color="error"
@@ -402,7 +336,7 @@ export default function UserListPage() {
     <>
       <ReactTable
         {...{
-          data: lists,
+          data: lists as any[], // Temporal cast para evitar error de tipos
           columns,
           modalToggler: () => {
             setUserModal(true);

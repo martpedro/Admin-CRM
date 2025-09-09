@@ -41,9 +41,11 @@ import IconButton from 'components/@extended/IconButton';
 import CircularWithPath from 'components/@extended/progress/CircularWithPath';
 
 import { insertCustomer, updateCustomer } from 'api/customer';
+import { getSalesAdvisors } from 'api/user';
 import { openSnackbar } from 'api/snackbar';
 import { Gender } from 'config';
 import { ImagePath, getImageUrl } from 'utils/getImageUrl';
+import useAuth from 'hooks/useAuth';
 
 // assets
 import { Camera, CloseCircle, Trash } from 'iconsax-react';
@@ -52,11 +54,6 @@ import { Camera, CloseCircle, Trash } from 'iconsax-react';
 import { SnackbarProps } from 'types/snackbar';
 import { CustomerList } from 'types/customer';
 import { m } from 'framer-motion';
-
-interface StatusProps {
-  value: number;
-  label: string;
-}
 
 const skills = [
   'Adobe XD',
@@ -101,7 +98,7 @@ const skills = [
 ];
 
 // CONSTANT
-const getInitialValues = (customer: CustomerList | null) => {
+const getInitialValues = (customer: CustomerList | null, currentUserId?: number) => {
   const newCustomer = {
     firstName: '',
     lastName: '',
@@ -109,37 +106,33 @@ const getInitialValues = (customer: CustomerList | null) => {
     name: '',
     email: '',
     phone: '',
-    age: 18,
-    gender: Gender.FEMALE,
-    supportSales: '',
+    supportSales: currentUserId ? currentUserId.toString() : '',
     classCustomer: '',
-    role: '',
     companyName: '',
-    fatherName: '',
-    orders: 0,
-    progress: 50,
     status: 2,
-    orderStatus: '',
     contact: '',
     about: '',
-    skills: [],
-    time: ['just now'],
-    date: ''
   };
 
   if (customer) {
-    return merge({}, newCustomer, customer);
+    return {
+      firstName: customer.FirstName || customer.firstName || '',
+      lastName: customer.LastName || customer.lastName || '',
+      middleName: customer.MiddleName || customer.middleName || '',
+      name: customer.Name || customer.name || '',
+      email: customer.Email || customer.email || '',
+      phone: customer.Phone || customer.phone || '',
+      supportSales: customer.SupportSales?.Id?.toString() || customer.supportSales || '',
+      classCustomer: customer.ClassCustomer || customer.classCustomer || '',
+      companyName: customer.CompanyName || customer.companyName || '',
+      status: customer.Status ?? customer.status ?? 2,
+      contact: customer.Contact || customer.contact || '',
+      about: customer.About || customer.about || '',
+    };
   }
 
   return newCustomer;
 };
-
-const allStatus: StatusProps[] = [
-  { value: 3, label: 'Rejected' },
-  { value: 1, label: 'Verified' },
-  { value: 2, label: 'Pending' }
-];
-
 
 const customerClassifications = [
   { value: 'A', label: 'Platino (más de $500,000 en ventas)' },
@@ -154,17 +147,48 @@ const customerClassifications = [
 
 export default function FormCustomerAdd({ customer, closeModal }: { customer: CustomerList | null; closeModal: () => void }) {
   const [loading, setLoading] = useState<boolean>(true);
-
+  const [salesAdvisors, setSalesAdvisors] = useState<Array<{value: number, label: string, profile: string}>>([]);
+  const [loadingAdvisors, setLoadingAdvisors] = useState<boolean>(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     setLoading(false);
+    loadSalesAdvisors();
   }, []);
 
+  const loadSalesAdvisors = async () => {
+    setLoadingAdvisors(true);
+    try {
+      const result = await getSalesAdvisors();
+      if (result.success && result.data) {
+        setSalesAdvisors(result.data);
+      } else {
+        openSnackbar({
+          open: true,
+          message: result.error || 'Error al cargar asesores de ventas',
+          variant: 'alert',
+          alert: {
+            color: 'error'
+          }
+        } as SnackbarProps);
+      }
+    } catch (error) {
+      console.error('Error loading sales advisors:', error);
+    } finally {
+      setLoadingAdvisors(false);
+    }
+  };
+
   const CustomerSchema = Yup.object().shape({
-    firstName: Yup.string().max(255).required('First Name is required'),
-    lastName: Yup.string().max(255).required('Last Name is required'),
-    email: Yup.string().max(255).required('Email is required').email('Must be a valid email'),
-    about: Yup.string().max(500)
+    firstName: Yup.string().max(255).required('El nombre es requerido'),
+    lastName: Yup.string().max(255).required('El apellido paterno es requerido'),
+    middleName: Yup.string().max(255),
+    email: Yup.string().max(255).required('El correo electrónico es requerido').email('Debe ser un correo electrónico válido'),
+    phone: Yup.string().matches(/^[0-9+\-\s()]*$/, 'El teléfono debe contener solo números y caracteres válidos'),
+    companyName: Yup.string().max(255),
+    classCustomer: Yup.string().required('La clasificación del cliente es requerida'),
+    supportSales: Yup.string().required('El asesor de ventas es requerido'),
+    about: Yup.string().max(500, 'La descripción no puede exceder 500 caracteres')
   });
 
   const [openAlert, setOpenAlert] = useState(false);
@@ -175,19 +199,42 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
   };
 
   const formik = useFormik({
-    initialValues: getInitialValues(customer!),
+    initialValues: getInitialValues(customer!, user?.id ? (typeof user.id === 'string' ? parseInt(user.id) : user.id) : undefined),
     validationSchema: CustomerSchema,
     enableReinitialize: true,
     onSubmit: async (values, { setSubmitting }) => {
       try {
-        let newCustomer: CustomerList = values;
-        newCustomer.name = newCustomer.firstName + ' ' + newCustomer.lastName;
+        // Mapear los valores del formulario al tipo CustomerList
+        let newCustomer: CustomerList = {
+          FirstName: values.firstName,
+          LastName: values.lastName,
+          MiddleName: values.middleName,
+          Name: values.firstName + ' ' + values.lastName,
+          Email: values.email,
+          Phone: values.phone,
+          ClassCustomer: values.classCustomer,
+          CompanyName: values.companyName,
+          Status: values.status,
+          Contact: values.contact, 
+          About: values.about,
+          SupportSales: values.supportSales ? { Id: Number(values.supportSales) } : undefined
+        };
+        
+        // Si estamos editando, mantener el ID
+        if (customer?.Id) {
+          newCustomer.Id = customer.Id;
+        }
+        
+        console.log("Datos new customer", newCustomer);
 
         if (customer) {
-          updateCustomer(newCustomer.id!, newCustomer).then(() => {
+          // Actualizar cliente existente
+          const result = await updateCustomer(newCustomer.Id!, newCustomer);
+          
+          if (result.success) {
             openSnackbar({
               open: true,
-              message: 'Customer update successfully.',
+              message: 'Cliente actualizado exitosamente.',
               variant: 'alert',
               alert: {
                 color: 'success'
@@ -195,12 +242,26 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
             } as SnackbarProps);
             setSubmitting(false);
             closeModal();
-          });
+          } else {
+            openSnackbar({
+              open: true,
+              message: result.error || 'Error al actualizar el cliente.',
+              variant: 'alert',
+              alert: {
+                color: 'error'
+              }
+            } as SnackbarProps);
+            setSubmitting(false);
+          }
         } else {
-          await insertCustomer(newCustomer).then(() => {
+          // Crear nuevo cliente
+
+          const result = await insertCustomer(newCustomer);
+          
+          if (result.success) {
             openSnackbar({
               open: true,
-              message: 'Customer added successfully.',
+              message: 'Cliente creado exitosamente.',
               variant: 'alert',
               alert: {
                 color: 'success'
@@ -208,13 +269,47 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
             } as SnackbarProps);
             setSubmitting(false);
             closeModal();
-          });
+          } else {
+            openSnackbar({
+              open: true,
+              message: result.error || 'Error al crear el cliente.',
+              variant: 'alert',
+              alert: {
+                color: 'error'
+              }
+            } as SnackbarProps);
+            setSubmitting(false);
+          }
         }
-      } catch {}
+      } catch (error) {
+        console.error('Error inesperado:', error);
+        openSnackbar({
+          open: true,
+          message: 'Error inesperado. Por favor intente nuevamente.',
+          variant: 'alert',
+          alert: {
+            color: 'error'
+          }
+        } as SnackbarProps);
+        setSubmitting(false);
+      }
     }
   });
 
   const { errors, touched, handleSubmit, isSubmitting, getFieldProps, setFieldValue } = formik;
+
+  // useEffect para establecer el usuario logueado como default cuando se cargan los asesores
+  useEffect(() => {
+    if (!customer && user?.id && salesAdvisors.length > 0 && !loadingAdvisors) {
+      const currentUserId = typeof user.id === 'string' ? parseInt(user.id) : user.id;
+      const userExists = salesAdvisors.find(advisor => advisor.value === currentUserId);
+      
+      // Solo establecer si no hay valor previo y el usuario existe en la lista
+      if (userExists && (!formik.values.supportSales || formik.values.supportSales === '')) {
+        setFieldValue('supportSales', currentUserId.toString());
+      }
+    }
+  }, [salesAdvisors, loadingAdvisors, customer, user?.id, setFieldValue]);
 
   if (loading)
     return (
@@ -267,14 +362,14 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-lastName">Apellido Materno</InputLabel>
+                        <InputLabel htmlFor="customer-middleName">Apellido Materno</InputLabel>
                         <TextField
                           fullWidth
-                          id="customer-lastName"
-                          placeholder="Ingrese el apellido"
-                          {...getFieldProps('lastName')}
-                          error={Boolean(touched.lastName && errors.lastName)}
-                          helperText={touched.lastName && errors.lastName}
+                          id="customer-middleName"
+                          placeholder="Ingrese el apellido materno"
+                          {...getFieldProps('middleName')}
+                          error={Boolean(touched.middleName && errors.middleName)}
+                          helperText={touched.middleName && errors.middleName}
                         />
                       </Stack>
                     </Grid>
@@ -293,12 +388,11 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                     </Grid>
                     <Grid size={6}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-phone">Numero de telefono</InputLabel>
+                        <InputLabel htmlFor="customer-phone">Número de teléfono</InputLabel>
                         <TextField
-                          type="number"
                           fullWidth
                           id="customer-phone"
-                          placeholder="Ingrese la edad"
+                          placeholder="Ingrese el número de teléfono"
                           {...getFieldProps('phone')}
                           error={Boolean(touched.phone && errors.phone)}
                           helperText={touched.phone && errors.phone}
@@ -311,7 +405,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                         <TextField
                           fullWidth
                           id="customer-companyName"
-                          placeholder="Ingrese el nombre del padre"
+                          placeholder="Ingrese el nombre de la empresa"
                           {...getFieldProps('companyName')}
                           error={Boolean(touched.companyName && errors.companyName)}
                           helperText={touched.companyName && errors.companyName}
@@ -365,37 +459,47 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                     </Grid> */}
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="customer-status">Asesor de ventas</InputLabel>
+                        <InputLabel htmlFor="customer-supportSales">Asesor de ventas</InputLabel>
                         <FormControl fullWidth>
                           <Select
-                            id="column-hiding"
+                            id="customer-supportSales"
                             displayEmpty
-                            {...getFieldProps('status')}
-                            onChange={(event: SelectChangeEvent<string>) => setFieldValue('status', event.target.value as string)}
-                            input={<OutlinedInput id="select-column-hiding" placeholder="Ordenar por" />}
+                            {...getFieldProps('supportSales')}
+                            onChange={(event: SelectChangeEvent<string>) => setFieldValue('supportSales', event.target.value as string)}
+                            input={<OutlinedInput id="select-supportSales" placeholder="Seleccionar un asesor" />}
                             renderValue={(selected) => {
                               if (!selected) {
                                 return <Typography variant="subtitle1">Seleccionar un asesor</Typography>;
                               }
 
-                              const selectedStatus = allStatus.filter((item) => item.value === Number(selected));
+                              const selectedAdvisor = salesAdvisors.find((advisor) => advisor.value === Number(selected));
                               return (
                                 <Typography variant="subtitle2">
-                                  {selectedStatus.length > 0 ? selectedStatus[0].label : 'Pendiente'}
+                                  {selectedAdvisor ? selectedAdvisor.label : 'Asesor no encontrado'}
                                 </Typography>
                               );
                             }}
+                            disabled={loadingAdvisors}
                           >
-                            {allStatus.map((column: StatusProps) => (
-                              <MenuItem key={column.value} value={column.value}>
-                                <ListItemText primary={column.label} />
+                            {loadingAdvisors ? (
+                              <MenuItem disabled>
+                                <ListItemText primary="Cargando asesores..." />
                               </MenuItem>
-                            ))}
+                            ) : (
+                              salesAdvisors.map((advisor) => (
+                                <MenuItem key={advisor.value} value={advisor.value}>
+                                  <ListItemText 
+                                    primary={advisor.label} 
+                                    secondary={advisor.profile}
+                                  />
+                                </MenuItem>
+                              ))
+                            )}
                           </Select>
                         </FormControl>
-                        {touched.status && errors.status && (
-                          <FormHelperText error id="standard-weight-helper-text-email-login" sx={{ pl: 1.75 }}>
-                            {errors.status}
+                        {touched.supportSales && errors.supportSales && (
+                          <FormHelperText error id="standard-weight-helper-text-supportSales" sx={{ pl: 1.75 }}>
+                            {errors.supportSales}
                           </FormHelperText>
                         )}
                       </Stack>
@@ -447,7 +551,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
           </Form>
         </LocalizationProvider>
       </FormikProvider>
-      {customer && <AlertCustomerDelete id={customer.id!} title={customer.name} open={openAlert} handleClose={handleAlertClose} />}
+      {customer && <AlertCustomerDelete id={customer.Id!} title={customer.Name || customer.name || ''} open={openAlert} handleClose={handleAlertClose} />}
     </>
   );
 }

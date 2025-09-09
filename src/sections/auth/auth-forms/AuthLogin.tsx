@@ -50,8 +50,8 @@ export default function AuthLogin({ forgot }: { forgot?: string }) {
     <>
       <Formik
         initialValues={{
-          email: 'info@phoenixcoded.co',
-          password: '123456',
+          email: 'admin@example.com',
+          password: 'password123',
           submit: null
         }}
         validationSchema={Yup.object().shape({
@@ -59,7 +59,6 @@ export default function AuthLogin({ forgot }: { forgot?: string }) {
           password: Yup.string()
             .required('La contraseña es obligatoria')
             .test('no-leading-trailing-whitespace', 'La contraseña no puede comenzar ni terminar con espacios', (value) => value === value.trim())
-            .max(10, 'La contraseña debe tener menos de 10 caracteres')
         })}
         onSubmit={async (values, { setErrors, setStatus, setSubmitting }) => {
           try {

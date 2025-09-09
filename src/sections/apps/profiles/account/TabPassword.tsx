@@ -204,8 +204,8 @@ export default function TabPassword() {
                   <Typography variant="h5">New Password must contain:</Typography>
                   <List sx={{ p: 0, mt: 1 }}>
                     <ListItem divider>
-                      <ListItemIcon sx={{ color: minLength(values.password) ? 'success.main' : 'inherit' }}>
-                        {minLength(values.password) ? <TickCircle /> : <Minus />}
+                      <ListItemIcon sx={{ color: minLength(values.password, 8) ? 'success.main' : 'inherit' }}>
+                        {minLength(values.password, 8) ? <TickCircle /> : <Minus />}
                       </ListItemIcon>
                       <ListItemText primary="At least 8 characters" />
                     </ListItem>

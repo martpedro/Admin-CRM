@@ -189,7 +189,7 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
           <Grid size={12}>
             <Box>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', listStyle: 'none', p: 0.5, m: 0 }} component="ul">
-                {customer.skills.map((skill: string, index: number) => (
+                {customer.skills?.map((skill: string, index: number) => (
                   <ListItem disablePadding key={index} sx={{ width: 'auto', pr: 0.75, pb: 0.75 }}>
                     <Chip color="secondary" variant="outlined" size="small" label={skill} sx={{ color: 'text.secondary' }} />
                   </ListItem>
@@ -212,7 +212,7 @@ export default function CustomerCard({ customer }: { customer: CustomerList }) {
         </Stack>
       </MainCard>
       <CustomerPreview customer={customer} open={open} onClose={handleClose} editCustomer={editCustomer} />
-      <AlertCustomerDelete id={customer.id!} title={customer.name} open={openAlert} handleClose={handleAlertClose} />
+      <AlertCustomerDelete id={customer.Id!} title={customer.Name} open={openAlert} handleClose={handleAlertClose} />
       <CustomerModal open={customerModal} modalToggler={setCustomerModal} customer={selectedCustomer} />
     </>
   );

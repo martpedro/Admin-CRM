@@ -5,9 +5,10 @@ import useSWR, { mutate } from 'swr';
 
 // project-imports
 import { fetcher } from 'utils/axios';
+import axiosServices from 'utils/axios';
 
 // types
-import { UserList, UserProps } from 'types/user';
+import { UserList, UserProps, ApiUser, UsersApiResponse } from 'types/user';
 
 const initialState: UserProps = {
   modal: false
@@ -16,7 +17,7 @@ const initialState: UserProps = {
 // ==============================|| API - User ||============================== //
 
 const endpoints = {
-  key: 'api/User',
+  key: 'api/user',
   list: '/list', // server URL
   modal: '/modal', // server URL
   insert: '/insert', // server URL
@@ -25,24 +26,93 @@ const endpoints = {
 };
 
 export function useGetUser() {
-  const { data, isLoading, error, isValidating } = useSWR(endpoints.key + endpoints.list, fetcher, {
+  // Crear un fetcher específico para usuarios con headers forzados
+  const userFetcher = async (url: string) => {
+    const response = await axiosServices.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    return response.data;
+  };
+
+  const { data, isLoading, error, isValidating } = useSWR(endpoints.key + endpoints.list, userFetcher, {
     revalidateIfStale: false,
     revalidateOnFocus: false,
-    revalidateOnReconnect: false
+    revalidateOnReconnect: false,
+    errorRetryCount: 3,
+    errorRetryInterval: 1000
   });
+
+  // Usuario de ejemplo solicitado
+  const users = (data?.Message?.[0] && Array.isArray(data.Message[0])) ? data.Message[0] : [];
 
   const memoizedValue = useMemo(
     () => ({
-      Users: data?.Users as UserList[] || [],
-      UsersLoading: isLoading,
-      UsersError: error,
-      UsersValidating: isValidating,
-      UsersEmpty: !isLoading && !data?.Users?.length
+      users,
+      usersLoading: isLoading,
+      usersError: error,
+      usersValidating: isValidating,
+      usersEmpty: !isLoading && users.length === 0,
+      totalUsers: users.length
     }),
-    [data, error, isLoading, isValidating]
+    [users, error, isLoading, isValidating]
   );
 
   return memoizedValue;
+}
+
+// Función específica para obtener usuarios activos como asesores de ventas
+export async function getSalesAdvisors() {
+  try {
+    console.log('Iniciando petición a /api/User/list...');
+    
+    const response = await axiosServices.get('/api/User/list', {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
+      },
+      timeout: 10000, // 10 segundos de timeout
+      validateStatus: function (status) {
+        // Aceptar tanto 200 como 204
+        return status === 200 || status === 204;
+      }
+    });
+    
+    console.log('Respuesta recibida:', response.status, response.data);
+    
+    // Si es 204, retornar array vacío
+    if (response.status === 204 || !response.data) {
+      console.log('Respuesta 204 o sin datos - retornando array vacío');
+      return {
+        success: true,
+        data: []
+      };
+    }
+    
+    // Corregir: La respuesta viene en Message[0], no en Message
+    const users = response.data?.Message?.[0] as ApiUser[] || [];
+    console.log('Usuarios obtenidos:', users);
+    
+    // Filtrar solo usuarios activos que puedan ser asesores de ventas
+    const advisors = users.filter(user => user.isActive === true);
+    
+    return {
+      success: true,
+      data: advisors.map(user => ({
+        value: user.Id,
+        label: `${user.name} ${user.LastName} ${user.MotherLastName || ''}`.trim(),
+        profile: user.profile,
+        email: user.email
+      }))
+    };
+  } catch (error: any) {
+    console.error('Error en getSalesAdvisors:', error);
+    const errorMessage = error.response?.data?.message || error.message || 'Error al obtener asesores de ventas';
+    return { success: false, error: errorMessage };
+  }
 }
 
 export async function insertUser(newUser: UserList) {
@@ -50,11 +120,9 @@ export async function insertUser(newUser: UserList) {
   mutate(
     endpoints.key + endpoints.list,
     (currentUser: any) => {
-      console.log('currentUser', currentUser);
-      currentUser = currentUser || { Users: [] }; // Ensure currentUser is defined
+      currentUser = currentUser || { Users: [] };
       newUser.id = currentUser.Users.length + 1;
       const addedUser: UserList[] = [...(currentUser.Users || []), newUser];
-      console.log('addedUser', addedUser);
       return {
         ...currentUser,
         Users: addedUser
@@ -63,10 +131,18 @@ export async function insertUser(newUser: UserList) {
     false
   );
 
-  // to hit server
-  // you may need to refetch latest data after server hit and based on your logic
-  //   const data = { newUser };
-  //   await axios.post(endpoints.key + endpoints.insert, data);
+  // Enviar datos y archivo avatar al backend
+  const formData = new FormData();
+  Object.entries(newUser).forEach(([key, value]) => {
+    if (key === 'avatar' && value instanceof File) {
+      formData.append('avatar', value);
+    } else {
+      formData.append(key, value as any);
+    }
+  });
+  await axiosServices.post(endpoints.key + endpoints.insert, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
 }
 
 export async function updateUser(UserId: number, updatedUser: UserList) {
@@ -77,7 +153,6 @@ export async function updateUser(UserId: number, updatedUser: UserList) {
       const newUser: UserList[] = currentUser.Users.map((User: UserList) =>
         User.id === UserId ? { ...User, ...updatedUser } : User
       );
-
       return {
         ...currentUser,
         Users: newUser
@@ -86,10 +161,18 @@ export async function updateUser(UserId: number, updatedUser: UserList) {
     false
   );
 
-  // to hit server
-  // you may need to refetch latest data after server hit and based on your logic
-  //   const data = { list: updatedUser };
-  //   await axios.post(endpoints.key + endpoints.update, data);
+  // Enviar datos y archivo avatar al backend
+  const formData = new FormData();
+  Object.entries(updatedUser).forEach(([key, value]) => {
+    if (key === 'avatar' && value instanceof File) {
+      formData.append('avatar', value);
+    } else {
+      formData.append(key, value as any);
+    }
+  });
+  await axiosServices.post(endpoints.key + endpoints.update, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
 }
 
 export async function deleteUser(UserId: number) {

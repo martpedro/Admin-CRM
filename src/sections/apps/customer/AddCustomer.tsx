@@ -26,7 +26,7 @@ export default function AddCustomer() {
 
   useEffect(() => {
     if (customerMaster?.modal && typeof customerMaster.modal === 'number') {
-      const newList = customers.filter((info) => info.id === isModal && info)[0];
+      const newList = customers.filter((info) => info.Id === isModal && info)[0];
       setList(newList);
     } else {
       setList(null);

@@ -1,4 +1,7 @@
 import { useEffect, useState, ChangeEvent } from 'react';
+import { CompanyInfo } from 'types/company';
+import useSWR from 'swr';
+import companyApi from 'api/company';
 
 // material-ui
 import Autocomplete from '@mui/material/Autocomplete';
@@ -151,6 +154,11 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
     getImageUrl(`avatar-${user && user !== null && user?.avatar ? user.avatar : 1}.png`, ImagePath.USERS)
   );
 
+  // Estado para la empresa seleccionada
+  const [empresa, setEmpresa] = useState<CompanyInfo | null>(null);
+  // Obtener empresas desde el API
+  const { data: empresas, isLoading: loadingEmpresas } = useSWR('empresas', companyApi.getAll);
+
   useEffect(() => {
     if (selectedImage) {
       setAvatar(URL.createObjectURL(selectedImage));
@@ -288,6 +296,69 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                 </Grid>
                 <Grid size={{ xs: 12, md: 8 }}>
                   <Grid container spacing={3}>
+                    {/* Sección de información de la empresa */}
+                    <Grid size={12}>
+                      <Stack sx={{ gap: 1, mb: 2 }}>
+                        <InputLabel htmlFor="empresa-select">Empresa</InputLabel>
+                        <Select
+                          id="empresa-select"
+                          value={empresa?.id || ''}
+                          onChange={e => {
+                            const found = empresas?.find(emp => emp.id === Number(e.target.value));
+                            setEmpresa(found || null);
+                          }}
+                          displayEmpty
+                          disabled={loadingEmpresas}
+                        >
+                          <MenuItem value="">
+                            <em>{loadingEmpresas ? 'Cargando empresas...' : 'Selecciona una empresa'}</em>
+                          </MenuItem>
+                          {empresas && empresas.map(emp => (
+                            <MenuItem key={emp.id} value={emp.id}>{emp.razonSocial}</MenuItem>
+                          ))}
+                        </Select>
+                      </Stack>
+                    </Grid>
+                    {empresa && (
+                      <>
+                        <Grid size={12}>
+                          <Stack sx={{ gap: 1 }}>
+                            <InputLabel>Razón Social</InputLabel>
+                            <TextField fullWidth value={empresa.razonSocial} InputProps={{ readOnly: true }} />
+                          </Stack>
+                        </Grid>
+                        <Grid size={12}>
+                          <Stack sx={{ gap: 1 }}>
+                            <InputLabel>RFC</InputLabel>
+                            <TextField fullWidth value={empresa.rfc} InputProps={{ readOnly: true }} />
+                          </Stack>
+                        </Grid>
+                        <Grid size={12}>
+                          <Stack sx={{ gap: 1 }}>
+                            <InputLabel>Dirección</InputLabel>
+                            <TextField fullWidth value={empresa.direccion} InputProps={{ readOnly: true }} />
+                          </Stack>
+                        </Grid>
+                        <Grid size={12}>
+                          <Stack sx={{ gap: 1 }}>
+                            <InputLabel>Teléfonos</InputLabel>
+                            <TextField fullWidth value={empresa.telefonos} InputProps={{ readOnly: true }} />
+                          </Stack>
+                        </Grid>
+                        <Grid size={12}>
+                          <Stack sx={{ gap: 1 }}>
+                            <InputLabel>WhatsApp</InputLabel>
+                            <TextField fullWidth value={empresa.whatsapp} InputProps={{ readOnly: true }} />
+                          </Stack>
+                        </Grid>
+                        <Grid size={12}>
+                          <Stack sx={{ gap: 1 }}>
+                            <InputLabel>Página</InputLabel>
+                            <TextField fullWidth value={empresa.pagina} InputProps={{ readOnly: true }} />
+                          </Stack>
+                        </Grid>
+                      </>
+                    )}
                     <Grid size={{ xs: 12, sm: 12 }}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-firstName">Nombre</InputLabel>

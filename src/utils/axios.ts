@@ -1,6 +1,11 @@
 import axios, { AxiosRequestConfig } from 'axios';
 
-const axiosServices = axios.create({ baseURL: import.meta.env.VITE_APP_API_URL || 'http://localhost:3010/' });
+const axiosServices = axios.create({ 
+  baseURL: import.meta.env.VITE_APP_API_URL || 'http://localhost:3003/',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
 
 // ==============================|| AXIOS - FOR MOCK SERVICES ||============================== //
 
@@ -9,6 +14,10 @@ axiosServices.interceptors.request.use(
     const accessToken = localStorage.getItem('serviceToken');
     if (accessToken) {
       config.headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    // Asegurar que el Content-Type esté configurado
+    if (!config.headers['Content-Type']) {
+      config.headers['Content-Type'] = 'application/json';
     }
     return config;
   },
@@ -32,7 +41,13 @@ export default axiosServices;
 export const fetcher = async (args: string | [string, AxiosRequestConfig]) => {
   const [url, config] = Array.isArray(args) ? args : [args];
 
-  const res = await axiosServices.get(url, { ...config });
+  const res = await axiosServices.get(url, { 
+    ...config,
+    headers: {
+      ...config?.headers,
+      'Content-Type': 'application/json'
+    }
+  });
 
   return res.data;
 };

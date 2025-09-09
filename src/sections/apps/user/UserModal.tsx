@@ -24,7 +24,7 @@ interface Props {
 // ==============================|| USER ADD / EDIT ||============================== //
 
 export default function UserModal({ open, modalToggler, user: user }: Props) {
-  const { UsersLoading: loading } = useGetUser();
+  const { usersLoading: loading } = useGetUser();
 
   const closeModal = useCallback(() => modalToggler(false), [modalToggler]);
 

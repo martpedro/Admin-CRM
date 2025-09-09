@@ -29,3 +29,21 @@ export interface UserList {
   time: string[];
   date: Date | string | number;
 }
+
+// Nuevo tipo basado en la respuesta de la API de usuarios
+export interface ApiUser {
+  Id: number;
+  name: string;
+  LastName: string;
+  MotherLastName: string;
+  Phone: string;
+  LetterAsign: string;
+  password: string;
+  profile: string;
+  email: string;
+  isActive: boolean;
+}
+
+export interface UsersApiResponse {
+  Message: [ApiUser[], number];
+}

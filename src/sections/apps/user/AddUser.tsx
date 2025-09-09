@@ -19,15 +19,15 @@ import { UserList } from 'types/user';
 
 export default function AddUser() {
   const { UserMasterLoading, UserMaster } = useGetUserMaster();
-  const { UsersLoading: loading, Users } = useGetUser();
+  const { usersLoading: loading, users } = useGetUser();
   const isModal = UserMaster?.modal;
 
   const [list, setList] = useState<UserList | null>(null);
 
   useEffect(() => {
     if (UserMaster?.modal && typeof UserMaster.modal === 'number') {
-      const newList = Users.filter((info) => info.id === isModal && info)[0];
-      setList(newList);
+      const newList = users.filter((info: any) => info.Id === isModal && info)[0];
+      setList(newList as any); // Cast temporal para evitar problemas de tipo
     } else {
       setList(null);
     }

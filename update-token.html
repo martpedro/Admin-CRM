@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Actualizar Token JWT</title>
+</head>
+<body>
+    <h2>Actualizar Token JWT</h2>
+    <p>Haz clic en el botón para actualizar el token en localStorage:</p>
+    <button onclick="updateToken()">Actualizar Token</button>
+    <div id="result"></div>
+
+    <script>
+        function updateToken() {
+            const newToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NSwiaWF0IjoxNzU2NjAwNjU5LCJleHAiOjE3NTY2MDI0NTl9.yjfYLgEj2-h0wAUNX-rbYu5AbhZbW9K6IvfigmaOLm8';
+            
+            try {
+                localStorage.setItem('serviceToken', newToken);
+                document.getElementById('result').innerHTML = '<p style="color: green;">✅ Token actualizado exitosamente!</p>';
+                
+                // Verificar que se guardó correctamente
+                const storedToken = localStorage.getItem('serviceToken');
+                if (storedToken === newToken) {
+                    document.getElementById('result').innerHTML += '<p style="color: blue;">✅ Token verificado en localStorage</p>';
+                    
+                    // Mostrar información del token
+                    try {
+                        const payload = JSON.parse(atob(newToken.split('.')[1]));
+                        const expDate = new Date(payload.exp * 1000);
+                        document.getElementById('result').innerHTML += '<p>Expira: ' + expDate.toLocaleString() + '</p>';
+                    } catch (e) {
+                        console.log('Error parsing token:', e);
+                    }
+                } else {
+                    document.getElementById('result').innerHTML += '<p style="color: red;">❌ Error verificando el token</p>';
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<p style="color: red;">❌ Error: ' + error.message + '</p>';
+            }
+        }
+    </script>
+</body>
+</html>

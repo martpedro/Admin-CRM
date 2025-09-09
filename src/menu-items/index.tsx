@@ -1,7 +1,6 @@
 // project-imports
 import applications from './applications';
 import pages from './pages';
-import samplePage from './sample-page';
 import support from './support';
 
 
@@ -9,12 +8,14 @@ import support from './support';
 import { NavItemType } from 'types/menu';
 import Users from './Users';
 import customer from './Customers';
-import sales from './Sales';
+import permissions from './Permissions';
+import quotations from './Quotations';
+import companies from './Companies';
 
 // ==============================|| MENU ITEMS ||============================== //
 
 const menuItems: { items: NavItemType[] } = {
-  items: [samplePage, Users, customer, sales]
+  items: [Users, customer, companies, quotations, permissions]
 };
 
 export default menuItems;

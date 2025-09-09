@@ -18,12 +18,14 @@ const MaintenanceComingSoon2 = Loadable(lazy(() => import('pages/maintenance/com
 const AppCustomerList = Loadable(lazy(() => import('pages/apps/customer/list')));
 
 const AppUserList = Loadable(lazy(() => import('pages/apps/user/list')));
+const AppPermissionsList = Loadable(lazy(() => import('pages/apps/permissions/list')));
+const PermissionsTeams = Loadable(lazy(() => import('sections/apps/permissions/teams')));
+const PermissionsAssign = Loadable(lazy(() => import('pages/apps/permissions/assign')));
 
-const AppInvoiceCreate = Loadable(lazy(() => import('pages/apps/invoice/create')));
-const AppInvoiceDashboard = Loadable(lazy(() => import('pages/apps/invoice/dashboard')));
-const AppInvoiceList = Loadable(lazy(() => import('pages/apps/invoice/list')));
-const AppInvoiceDetails = Loadable(lazy(() => import('pages/apps/invoice/details')));
-const AppInvoiceEdit = Loadable(lazy(() => import('pages/apps/invoice/edit')));
+// Quotations pages
+const AppQuotationsList = Loadable(lazy(() => import('pages/apps/quotations/list')));
+const AppQuotationsCreate = Loadable(lazy(() => import('pages/apps/quotations/create')));
+const AppCompanyList = Loadable(lazy(() => import('pages/apps/company/list')));
 
 // console.log('AppInvoiceCreate', AppInvoiceList, AppInvoiceDetails, AppInvoiceEdit);
 // render - sample page
@@ -62,29 +64,41 @@ const MainRoutes = {
           ]
         },
         {
-          path: 'sales',
+          path: 'permissions',
           children: [
             {
-              path: 'invoice-list',
-              element: <AppInvoiceList />,
-              title: 'editar',
-              
+              path: 'list',
+              element: <AppPermissionsList />
             },
             {
-              path: 'dashboard',
-              element: <AppInvoiceDashboard />
+              path: 'teams',
+              element: <PermissionsTeams />
+            },
+            {
+              path: 'assign',
+              element: <PermissionsAssign />
+            }
+          ]
+        },
+        {
+          path: 'company',
+          children: [
+            {
+              path: 'list',
+              element: <AppCompanyList />
+            }
+          ]
+        },
+        {
+          path: 'quotations',
+          children: [
+            {
+              path: '',
+              element: <AppQuotationsList />
             },
             {
               path: 'create',
-              element: <AppInvoiceCreate />
-            },
-            {
-              path: 'details/:id',
-              element: <AppInvoiceDetails />
-            },
-            {
-              path: 'edit/:id',
-              element: <AppInvoiceEdit />
+              element: <AppQuotationsCreate />
             }
           ]
         }

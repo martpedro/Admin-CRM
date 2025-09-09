@@ -158,7 +158,7 @@ export default function ListSmallCard({ customer }: Props) {
             </View>
           </View>
           <View style={[styles.row, { gap: 1, paddingTop: 18 }]}>
-            {customer.skills.map((skill: string, index: number) => (
+            {customer.skills?.map((skill: string, index: number) => (
               <View style={styles.chip} key={index}>
                 <Text style={styles.chipTitle}>{skill}</Text>
               </View>
