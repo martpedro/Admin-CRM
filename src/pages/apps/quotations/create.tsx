@@ -299,34 +299,54 @@ const CreateQuotation = () => {
                     {selectedCompany && (
                       <Grid item xs={12} md={6}>
                         <Card variant="outlined">
-                          <CardHeader 
+                          <CardHeader
                             title="Resumen de la Empresa"
                             titleTypographyProps={{ variant: 'h6', fontSize: '1rem' }}
                           />
                           <CardContent sx={{ pt: 1 }}>
-                            <Stack spacing={1}>
+                            <Stack spacing={1.25}>
                               <Box>
-                                <Typography variant="body2" color="textSecondary">Nombre:</Typography>
-                                <Typography variant="body2">{selectedCompany.Name || 'No disponible'}</Typography>
+                                <Typography variant="body2" color="textSecondary">Razón Social:</Typography>
+                                <Typography variant="body2">{selectedCompany.LegalName || selectedCompany.Name || 'No disponible'}</Typography>
                               </Box>
-                              {selectedCompany.Email && (
-                                <Box>
-                                  <Typography variant="body2" color="textSecondary">Email:</Typography>
-                                  <Typography variant="body2">{selectedCompany.Email}</Typography>
-                                </Box>
-                              )}
-                              {selectedCompany.Phone && (
-                                <Box>
-                                  <Typography variant="body2" color="textSecondary">Teléfono:</Typography>
-                                  <Typography variant="body2">{selectedCompany.Phone}</Typography>
-                                </Box>
-                              )}
-                              {selectedCompany.Address && (
-                                <Box>
-                                  <Typography variant="body2" color="textSecondary">Dirección:</Typography>
-                                  <Typography variant="body2">{selectedCompany.Address}</Typography>
-                                </Box>
-                              )}
+
+                              <Box>
+                                <Typography variant="body2" color="textSecondary">RFC:</Typography>
+                                <Typography variant="body2">{selectedCompany.TaxId || 'No disponible'}</Typography>
+                              </Box>
+
+                              <Box>
+                                <Typography variant="body2" color="textSecondary">Dirección:</Typography>
+                                <Typography variant="body2">{selectedCompany.Address || 'No disponible'}</Typography>
+                              </Box>
+
+                              <Box>
+                                <Typography variant="body2" color="textSecondary">Teléfonos:</Typography>
+                                <Typography variant="body2">{selectedCompany.Phones || selectedCompany.Phone || 'No disponible'}</Typography>
+                              </Box>
+
+                              <Box>
+                                <Typography variant="body2" color="textSecondary">WhatsApp:</Typography>
+                                <Typography variant="body2">{selectedCompany.WhatsApp || 'No disponible'}</Typography>
+                              </Box>
+
+                              <Box>
+                                <Typography variant="body2" color="textSecondary">Página:</Typography>
+                                {selectedCompany.WebPage ? (
+                                  <Typography variant="body2" color="primary">
+                                    <a
+                                      href={selectedCompany.WebPage.startsWith('http') ? selectedCompany.WebPage : `https://${selectedCompany.WebPage}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{ color: 'inherit', textDecoration: 'none' }}
+                                    >
+                                      {selectedCompany.WebPage}
+                                    </a>
+                                  </Typography>
+                                ) : (
+                                  <Typography variant="body2">No disponible</Typography>
+                                )}
+                              </Box>
                             </Stack>
                           </CardContent>
                         </Card>
