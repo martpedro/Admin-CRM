@@ -227,5 +227,7 @@
   "delete": "Eliminar",
   "confirm-delete-quotation": "¿Estás seguro de que deseas eliminar esta cotización?",
   "error-loading-quotations": "Error al cargar las cotizaciones",
-  "quotation-filters": "Filtros de estado de cotizaciones"
+  "quotation-filters": "Filtros de estado de cotizaciones",
+  "view-pdf": "Ver PDF",
+  "usuarios": "Usuarios"
 }

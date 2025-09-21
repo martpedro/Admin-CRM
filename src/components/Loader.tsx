@@ -14,10 +14,19 @@ const LoaderWrapper = styled('div')(({ theme }) => ({
 
 // ==============================|| Loader ||============================== //
 
-export default function Loader() {
+interface LoaderProps {
+  message?: string;
+}
+
+export default function Loader({ message }: LoaderProps) {
   return (
     <LoaderWrapper>
       <LinearProgress color="primary" sx={{ height: 2 }} />
+      {message && (
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          {message}
+        </div>
+      )}
     </LoaderWrapper>
   );
 }

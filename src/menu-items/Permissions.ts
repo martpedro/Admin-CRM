@@ -22,21 +22,25 @@ const Permissions: NavItemType = {
       title: 'Roles',
       type: 'item',
       url: '/permissions/roles',
-      icon: icons.permissions
+      icon: icons.permissions,
+      // permisos requeridos (ejemplo)
+      requiredPermissions: ['role_read']
     },
     {
       id: 'permissions-list',
       title: 'Gestión de Permisos',
       type: 'item',
       url: '/permissions/list',
-      icon: icons.permissions
+      icon: icons.permissions,
+      requiredPermissions: ['permission_read']
     },
     {
       id: 'teams',
       title: 'Equipos',
       type: 'item',
       url: '/permissions/teams',
-      icon: icons.teams
+      icon: icons.teams,
+      requiredPermissions: ['team_read']
     }
   ]
 };

@@ -37,6 +37,8 @@ export default function Navigation() {
   // Filtrado por menús permitidos
   const auth = useContext(JWTContext);
   const hasFilter = Array.isArray(auth?.menus);
+  console.log('User menus from context:', auth?.menus);
+  console.log('Has menuItems:', menuItems);
   const allowedMenuPaths = new Set((hasFilter ? (auth?.menus as string[]) : []));
   const filterByAllowed = (item: NavItemType): boolean => {
     if (!hasFilter) return true; // si no hay dato del backend aún, mostrar todo

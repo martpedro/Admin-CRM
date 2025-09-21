@@ -1,13 +1,7 @@
-import { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useContext, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Formik, Form, FieldArray } from 'formik';
 import * as Yup from 'yup';
-
-// types
-import { CustomerList } from 'types/customer';
-import { ApiUser } from 'types/user';
-
-// material-ui
 import {
   Box,
   Button,
@@ -15,6 +9,8 @@ import {
   CardContent,
   CardHeader,
   Divider,
+  FormControl,
+  FormHelperText,
   IconButton,
   InputLabel,
   MenuItem,
@@ -28,43 +24,28 @@ import {
   TableRow,
   TextField,
   Typography,
-  FormControl,
-  FormHelperText,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Tab,
-  Tabs,
-  Avatar
+  Avatar,
+  CircularProgress
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
-
-// third-party
+import { Add, Trash } from 'iconsax-react';
 import { enqueueSnackbar } from 'notistack';
-
-// project-imports
+import ProductAddDialog, { ProductWithOrigin } from 'components/quotations/ProductAddDialog';
 import Breadcrumbs from 'components/@extended/Breadcrumbs';
 import MainCard from 'components/MainCard';
-import { useQuotationOperations } from 'hooks/useQuotations';
+import { useQuotation, useQuotationOperations } from 'hooks/useQuotations';
 import { useCustomers } from 'hooks/useCustomers';
-// import { useUsers } from 'hooks/useUsers';
 import { useCompanies, useCompanyOperations } from 'hooks/useCompanies';
-import quotationsApi from 'api/quotations';
-import JWTContext from 'contexts/JWTContext';
-
-// assets
-import { Add, Trash, SearchNormal1, DocumentUpload } from 'iconsax-react';
-import Autocomplete from '@mui/material/Autocomplete';
-import ProductAddDialog, { ProductWithOrigin } from 'components/quotations/ProductAddDialog';
-import { getAddressesByCustomer } from 'api/customer';
-
-// types
-import { QuotationCreate, QuotationProduct } from 'api/quotations';
+import { QuotationProduct } from 'api/quotations';
 import { calculateProductTotal, calculateTotals, formatCurrencyMXN } from 'utils/quotation';
 import Chip from '@mui/material/Chip';
-
-// ProductWithOrigin ahora viene del componente reutilizable ProductAddDialog
+import JWTContext from 'contexts/JWTContext';
+import { getAddressesByCustomer } from 'api/customer';
+import QuotationPdfViewer from 'components/quotations/QuotationPdfViewer';
+import Loader from 'components/Loader';
+import SendQuotationEmailDialog from 'components/quotations/SendQuotationEmailDialog';
+import axiosServices from 'utils/axios';
+import { sendQuotationEmail } from 'api/quotations';
 
 const validationSchema = Yup.object({
   CustomerId: Yup.number().required('El cliente es requerido'),
@@ -75,40 +56,53 @@ const validationSchema = Yup.object({
   LiquidationPayment: Yup.string().required('La liquidación es requerida'),
   TimeCredit: Yup.string().required('El tiempo de crédito es requerido'),
   TimeValidation: Yup.string().required('El tiempo de validación es requerido'),
-  products: Yup.array().min(1, 'Debe agregar al menos un producto')
+  products: Yup.array().min(1, 'Debe haber al menos un producto')
 });
 
-const CreateQuotation = () => {
+const EditQuotation = () => {
+  const [openSendEmail, setOpenSendEmail] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const { id } = useParams();
+  const quotationId = Number(id);
   const navigate = useNavigate();
-  const auth = useContext(JWTContext);
-  const currentUserId = (auth?.user as any)?.Id || (auth?.user as any)?.id || 0;
-  const { createQuotation } = useQuotationOperations();
+  const { quotation, isLoading } = useQuotation(!isNaN(quotationId) ? quotationId : null);
+  const { updateQuotation } = useQuotationOperations();
   const { customers } = useCustomers();
-  const [advisors, setAdvisors] = useState<ApiUser[]>([]);
+  const { companies } = useCompanies();
+  const { getCompanyById } = useCompanyOperations();
+  const auth = useContext(JWTContext);
+
+  const [selectedCompany, setSelectedCompany] = useState<any>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [customerAddresses, setCustomerAddresses] = useState<any[]>([]);
+  const [advisors, setAdvisors] = useState<any[]>([]);
   const [loadingAdvisors, setLoadingAdvisors] = useState(false);
   const [advisorsError, setAdvisorsError] = useState<string | null>(null);
-  const [initialUserId, setInitialUserId] = useState<number>(currentUserId || 0);
-  // Cargar asesores según permisos del usuario
+  const [emissionDate, setEmissionDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [openProductDialog, setOpenProductDialog] = useState(false);
+  const [productPushFunction, setProductPushFunction] = useState<((obj: any) => void) | null>(null);
+  // Estados PDF removidos: se utiliza componente reutilizable
+
+  // Cargar asesores
   useEffect(() => {
     let active = true;
     const load = async () => {
       setLoadingAdvisors(true);
       setAdvisorsError(null);
       try {
-        const list = await quotationsApi.getAdvisors();
+        const list = await (await import('api/quotations')).default.getAdvisors();
         if (!active) return;
-        // El endpoint ya devuelve estructura mapUser; asegurar tipado mínimo
         const mapped = Array.isArray(list) ? list.map((u: any) => ({
           Id: u.Id,
-            name: u.name || u.Name || '',
-            LastName: u.LastName || '',
-            MotherLastName: u.MotherLastName || '',
-            email: u.email || u.Email || '',
-            isActive: u.isActive !== false,
-            profile: u.profile || '',
-            Phone: u.Phone || '',
-            LetterAsign: u.LetterAsign || '',
-            password: u.password || ''
+          name: u.name || u.Name || '',
+          LastName: u.LastName || '',
+          MotherLastName: u.MotherLastName || '',
+          email: u.email || u.Email || '',
+          isActive: u.isActive !== false,
+          profile: u.profile || '',
+          Phone: u.Phone || '',
+          LetterAsign: u.LetterAsign || '',
+          password: u.password || ''
         })) : [];
         setAdvisors(mapped);
       } catch (e: any) {
@@ -121,98 +115,86 @@ const CreateQuotation = () => {
     load();
     return () => { active = false; };
   }, []);
-  const { companies } = useCompanies();
-  const { getCompanyById } = useCompanyOperations();
 
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerList | null>(null);
-  const [customerAddresses, setCustomerAddresses] = useState<any[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<any>(null);
-  const [openProductDialog, setOpenProductDialog] = useState(false);
+  // Preparar valores iniciales cuando la cotización esté cargada
+  const initialValues = quotation ? {
+    Id: quotation.Id,
+    CustomerId: customers.length > 0 ? (quotation.Customer?.Id || 0) : 0,
+    UserId: advisors.length > 0 ? (quotation.User?.Id || (auth?.user as any)?.Id || 0) : 0,
+    AddressId: quotation.address?.Id || 0,
+    CompanyId: quotation.Company?.Id || 0,
+    AdvancePayment: quotation.AdvancePayment || '',
+    LiquidationPayment: quotation.LiquidationPayment || '',
+    TimeCredit: quotation.TimeCredit || '',
+    TimeValidation: quotation.TimeValidation || '',
+    SubTotal: quotation.SubTotal || 0,
+    Tax: quotation.Tax || 0,
+    Total: quotation.Total || 0,
+    products: (quotation.products || []).map((p: QuotationProduct) => ({ ...p }))
+  } : null;
 
-  const [productPushFunction, setProductPushFunction] = useState<((obj: any) => void) | null>(null);
-  const [emissionDate, setEmissionDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
-
-  // Actualizar initialUserId cuando cambie usuario logueado
+  // Set selected entities once quotation loaded
   useEffect(() => {
-    if (currentUserId && currentUserId !== initialUserId) {
-      setInitialUserId(currentUserId);
+    if (quotation) {
+      setSelectedCompany(quotation.Company || null);
+      setSelectedCustomer(quotation.Customer || null);
     }
-  }, [currentUserId]);
+  }, [quotation]);
 
-  const initialValues: QuotationCreate = {
-    CustomerId: customers.length > 0 ? 0 : 0,
-    UserId: advisors.length > 0 ? initialUserId || 0 : 0,
-    AddressId: 0,
-    CompanyId: 0,
-    AdvancePayment: '',
-    LiquidationPayment: '',
-    TimeCredit: '',
-    TimeValidation: '',
-    SubTotal: 0,
-    Tax: 0,
-    Total: 0,
-    products: []
-  };
+  // Cargar direcciones cliente si existe
+  useEffect(() => {
+    const loadAddresses = async () => {
+      if (initialValues?.CustomerId) {
+        try {
+          const list = await getAddressesByCustomer(initialValues.CustomerId);
+          setCustomerAddresses(Array.isArray(list) ? list : []);
+        } catch {
+          setCustomerAddresses([]);
+        }
+      }
+    };
+    loadAddresses();
+  }, [initialValues?.CustomerId]);
 
-  // Extendemos el tipo en runtime (si la interface original no lo tiene no afecta)
-  // Eliminado: ahora se gestiona dentro del diálogo reutilizable
+  // Funciones movidas a utils/quotation
 
-  // Funciones movidas a utils/quotation.ts
-
-  const handleSubmit = async (values: QuotationCreate) => {
+  const handleSubmit = async (values: any) => {
     try {
-      // Construir payload para enviar via FormData
       const formData = new FormData();
-      // Clonar productos para limpiar campos de sólo front
-      const productsForJson = values.products.map((p: any, idx: number) => {
+      // Copiar productos sin ImageFile
+      const productsForJson = (values.products || []).map((p: any) => {
         const { ImageFile, ...rest } = p;
         return { ...rest };
       });
       const jsonData = { ...values, products: productsForJson };
       formData.append('data', JSON.stringify(jsonData));
-      // Adjuntar archivos (solo manuales con ImageFile)
-      values.products.forEach((p: any, index: number) => {
+      (values.products || []).forEach((p: any, index: number) => {
         if (p.ImageFile instanceof File) {
           formData.append(`productImage_${index}`, p.ImageFile);
         }
       });
-      // Usar axios directamente (provisional) hasta adaptar quotationsApi
-      const response = await (await import('utils/axios')).default.post('/api/Quotation/Create', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      const result = { success: true, data: response.data?.Message ?? response.data };
-      if (result.success) {
-        const created = result.data;
-        enqueueSnackbar('Cotización creada exitosamente', { variant: 'success' });
-        // Redirigir a la pantalla de edición con el Id devuelto
-        if (created && created.Id) {
-          navigate(`/quotations/edit/${created.Id}`);
-        } else {
-          // Fallback: volver al listado
-          navigate('/quotations');
-        }
-      } else {
-        enqueueSnackbar('Error al crear la cotización', { variant: 'error' });
-      }
-    } catch (error) {
-      enqueueSnackbar('Error inesperado al crear la cotización', { variant: 'error' });
+      const axios = (await import('utils/axios')).default;
+      const response = await axios.put('/api/Quotation/Update', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      enqueueSnackbar('Cotización actualizada', { variant: 'success' });
+    } catch (e: any) {
+      enqueueSnackbar(e?.message || 'Error al actualizar', { variant: 'error' });
     }
   };
 
-  // Buscar producto por código en la API
-  // Lógica de agregar producto delegada al componente reutilizable
+  if (isLoading || !initialValues) {
+    return <Loader message="Cargando cotización..." />;
+  }
 
   return (
     <>
       <Breadcrumbs title />
-
-  <Formik enableReinitialize initialValues={initialValues} validationSchema={validationSchema} onSubmit={handleSubmit}>
+      <Formik enableReinitialize initialValues={initialValues} validationSchema={validationSchema} onSubmit={handleSubmit}>
         {({ values, errors, touched, handleChange, handleBlur, setFieldValue }) => (
           <Form>
             <Grid container spacing={3}>
-              {/* Company Selection */}
+              {/* Empresa */}
               <Grid size={12}>
-                <MainCard title="Información de la Empresa">
+                <MainCard title={`Editar Cotización #${quotation?.NumberQuotation || ''}`}>
                   <Grid container spacing={3}>
                     <Grid size={{ xs: 12, md: 6 }}>
                       <FormControl fullWidth error={Boolean(touched.CompanyId && errors.CompanyId)}>
@@ -227,8 +209,7 @@ const CreateQuotation = () => {
                               try {
                                 const company = await getCompanyById(companyId);
                                 setSelectedCompany(company);
-                              } catch (error) {
-                                console.error('Error fetching company:', error);
+                              } catch {
                                 setSelectedCompany(null);
                               }
                             } else {
@@ -238,106 +219,83 @@ const CreateQuotation = () => {
                           onBlur={handleBlur}
                         >
                           <MenuItem value={0}>Seleccionar empresa</MenuItem>
-                          {Array.isArray(companies) &&
-                            companies.map((company: any) => (
-                              <MenuItem key={company.Id} value={company.Id}>
-                                {company.Name || 'Sin nombre'}
-                              </MenuItem>
-                            ))}
+                          {companies.map((company: any) => (
+                            <MenuItem key={company.Id} value={company.Id}>{company.Name || 'Sin nombre'}</MenuItem>
+                          ))}
                         </Select>
-                        {touched.CompanyId && errors.CompanyId && <FormHelperText>{errors.CompanyId}</FormHelperText>}
+                        {touched.CompanyId && errors.CompanyId && <FormHelperText>{String(errors.CompanyId)}</FormHelperText>}
                       </FormControl>
+                                          <Button variant="outlined" color="secondary" onClick={() => setOpenSendEmail(true)}>
+                                            Enviar por correo
+                                          </Button>
                     </Grid>
-
                     {selectedCompany && (
                       <Grid size={{ xs: 12, md: 6 }}>
                         <Card variant="outlined">
                           <CardHeader title="Resumen de la Empresa" titleTypographyProps={{ variant: 'h6', fontSize: '1rem' }} />
                           <CardContent sx={{ pt: 0.5, pb: 1 }}>
+                                        <SendQuotationEmailDialog
+                                          open={openSendEmail}
+                                          onClose={() => setOpenSendEmail(false)}
+                                          loading={sendingEmail}
+                                          defaultTo={selectedCustomer?.Email || ''}
+                                          onSend={async ({ to, cc, message }) => {
+                                            setSendingEmail(true);
+                                            try {
+                                              if (!quotation?.Id) throw new Error('ID de cotización no disponible');
+                                              await sendQuotationEmail({
+                                                quotationId: quotation.Id,
+                                                to,
+                                                cc,
+                                                message
+                                              });
+                                              enqueueSnackbar('Correo enviado correctamente', { variant: 'success' });
+                                              setOpenSendEmail(false);
+                                            } catch (err: any) {
+                                              enqueueSnackbar('Error al enviar el correo', { variant: 'error' });
+                                            } finally {
+                                              setSendingEmail(false);
+                                            }
+                                          }}
+                                        />
                             <Grid container spacing={1}>
-                              {/* Razón Social - full width */}
                               <Grid size={12}>
-                                <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, mr: 0.5 }} component="span">
-                                  Razón Social:
-                                </Typography>
-                                <Typography variant="body2" component="span">
-                                  {selectedCompany.LegalName || selectedCompany.Name || 'No disponible'}
-                                </Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>Razón Social:</Typography>
+                                <Typography variant="body2" component="span">{selectedCompany.LegalName || selectedCompany.Name || 'No disponible'}</Typography>
                               </Grid>
-
-                              {/* RFC */}
                               <Grid size={{ xs: 12, sm: 6 }}>
-                                <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, mr: 0.5 }} component="span">
-                                  RFC:
-                                </Typography>
-                                <Typography variant="body2" component="span">
-                                  {selectedCompany.TaxId || 'No disponible'}
-                                </Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>RFC:</Typography>
+                                <Typography variant="body2" component="span">{selectedCompany.TaxId || 'No disponible'}</Typography>
                               </Grid>
-
-                              {/* Teléfonos */}
                               <Grid size={{ xs: 12, sm: 6 }}>
-                                <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, mr: 0.5 }} component="span">
-                                  Teléfonos:
-                                </Typography>
-                                <Typography variant="body2" component="span">
-                                  {selectedCompany.Phones || selectedCompany.Phone || 'No disponible'}
-                                </Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>Teléfonos:</Typography>
+                                <Typography variant="body2" component="span">{selectedCompany.Phones || selectedCompany.Phone || 'No disponible'}</Typography>
                               </Grid>
-
-                              {/* WhatsApp */}
                               <Grid size={{ xs: 12, sm: 6 }}>
-                                <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, mr: 0.5 }} component="span">
-                                  WhatsApp:
-                                </Typography>
-                                <Typography variant="body2" component="span">
-                                  {selectedCompany.WhatsApp || 'No disponible'}
-                                </Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>WhatsApp:</Typography>
+                                <Typography variant="body2" component="span">{selectedCompany.WhatsApp || 'No disponible'}</Typography>
                               </Grid>
-
-                              {/* Página */}
                               <Grid size={{ xs: 12, sm: 6 }}>
-                                <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, mr: 0.5 }} component="span">
-                                  Página:
-                                </Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>Página:</Typography>
                                 {selectedCompany.WebPage ? (
                                   <Typography variant="body2" component="span" color="primary">
-                                    <a
-                                      href={
-                                        selectedCompany.WebPage.startsWith('http')
-                                          ? selectedCompany.WebPage
-                                          : `https://${selectedCompany.WebPage}`
-                                      }
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      style={{ color: 'inherit', textDecoration: 'none' }}
-                                    >
+                                    <a href={selectedCompany.WebPage.startsWith('http') ? selectedCompany.WebPage : `https://${selectedCompany.WebPage}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
                                       {selectedCompany.WebPage}
                                     </a>
                                   </Typography>
                                 ) : (
-                                  <Typography variant="body2" component="span">
-                                    No disponible
-                                  </Typography>
+                                  <Typography variant="body2" component="span">No disponible</Typography>
                                 )}
                               </Grid>
-
-                              {/* Dirección - full width */}
                               <Grid size={12}>
-                                <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 600, mr: 0.5 }} component="span">
-                                  Dirección:
-                                </Typography>
-                                <Typography variant="body2" component="span">
-                                  {selectedCompany.Address || 'No disponible'}
-                                </Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>Dirección:</Typography>
+                                <Typography variant="body2" component="span">{selectedCompany.Address || 'No disponible'}</Typography>
                               </Grid>
                             </Grid>
                           </CardContent>
                         </Card>
                       </Grid>
                     )}
-
-                    {/* Campos debajo de Empresa */}
                     <Grid size={{ xs: 12, md: 4 }}>
                       <TextField
                         fullWidth
@@ -367,7 +325,7 @@ const CreateQuotation = () => {
                         fullWidth
                         size="small"
                         label="Cotización #"
-                        value={selectedCompany?.QuotationLetter ? `${selectedCompany.QuotationLetter}-` : 'Se generará al crear'}
+                        value={quotation?.NumberQuotation || 'Generado previamente'}
                         InputProps={{ readOnly: true }}
                       />
                     </Grid>
@@ -375,7 +333,7 @@ const CreateQuotation = () => {
                 </MainCard>
               </Grid>
 
-              {/* Customer Information */}
+              {/* Cliente */}
               <Grid size={12}>
                 <MainCard title="Información del Cliente">
                   <Grid container spacing={3}>
@@ -388,11 +346,8 @@ const CreateQuotation = () => {
                           onChange={async (e) => {
                             const customerId = e.target.value as number;
                             setFieldValue('CustomerId', customerId);
-                            const customer = customers.find((c: CustomerList) => c.Id === customerId);
-                            if (customer) {
-                              setSelectedCustomer(customer);
-                            }
-                            // Cargar direcciones del cliente y setear AddressId
+                            const customer = customers.find((c: any) => c.Id === customerId);
+                            if (customer) setSelectedCustomer(customer);
                             try {
                               if (customerId > 0) {
                                 const addresses = await getAddressesByCustomer(customerId);
@@ -403,8 +358,7 @@ const CreateQuotation = () => {
                                 setCustomerAddresses([]);
                                 setFieldValue('AddressId', 0);
                               }
-                            } catch (err) {
-                              console.error('Error fetching customer addresses', err);
+                            } catch {
                               setCustomerAddresses([]);
                               setFieldValue('AddressId', 0);
                             }
@@ -412,28 +366,17 @@ const CreateQuotation = () => {
                           onBlur={handleBlur}
                         >
                           <MenuItem value={0}>Seleccionar cliente</MenuItem>
-                          {Array.isArray(customers) &&
-                            customers.map((customer: CustomerList) => (
-                              <MenuItem key={customer.Id} value={customer.Id}>
-                                {customer.Name} - {customer.Email || 'Sin email'}
-                              </MenuItem>
-                            ))}
+                          {customers.map((customer: any) => (
+                            <MenuItem key={customer.Id} value={customer.Id}>{customer.Name} - {customer.Email || 'Sin email'}</MenuItem>
+                          ))}
                         </Select>
-                        {touched.CustomerId && errors.CustomerId && <FormHelperText>{errors.CustomerId}</FormHelperText>}
+                        {touched.CustomerId && errors.CustomerId && <FormHelperText>{String(errors.CustomerId)}</FormHelperText>}
                       </FormControl>
                     </Grid>
-
-                    {/* Datos del cliente autocompletados */}
                     {selectedCustomer && (
                       <>
                         <Grid size={{ xs: 12, md: 4 }}>
-                          <TextField
-                            fullWidth
-                            size="small"
-                            label="CLIENTE"
-                            value={selectedCustomer.Name || ''}
-                            InputProps={{ readOnly: true }}
-                          />
+                          <TextField fullWidth size="small" label="CLIENTE" value={selectedCustomer.Name || ''} InputProps={{ readOnly: true }} />
                         </Grid>
                         <Grid size={{ xs: 12, md: 4 }}>
                           {customerAddresses.length > 0 ? (
@@ -451,38 +394,22 @@ const CreateQuotation = () => {
                                   </MenuItem>
                                 ))}
                               </Select>
-                              {touched.AddressId && errors.AddressId && <FormHelperText>{errors.AddressId as any}</FormHelperText>}
+                              {touched.AddressId && errors.AddressId && <FormHelperText>{String(errors.AddressId as any)}</FormHelperText>}
                             </FormControl>
                           ) : (
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label="DIRECCIÓN"
-                              value={'Sin direcciones registradas'}
-                              InputProps={{ readOnly: true }}
-                              error={Boolean(touched.AddressId && errors.AddressId)}
-                              helperText={touched.AddressId && (errors.AddressId as any)}
-                            />
+                            <TextField fullWidth size="small" label="DIRECCIÓN" value={'Sin direcciones registradas'} InputProps={{ readOnly: true }} />
                           )}
                         </Grid>
                         <Grid size={{ xs: 12, md: 4 }}>
-                          <TextField
-                            fullWidth
-                            size="small"
-                            label="TELÉFONOS"
-                            value={selectedCustomer.Phone || ''}
-                            InputProps={{ readOnly: true }}
-                          />
+                          <TextField fullWidth size="small" label="TELÉFONOS" value={selectedCustomer.Phone || ''} InputProps={{ readOnly: true }} />
                         </Grid>
                       </>
                     )}
-
                     <Grid size={{ xs: 12, md: 6 }}>
                       <FormControl fullWidth error={Boolean(touched.UserId && errors.UserId)}>
                         <InputLabel>Asesor</InputLabel>
                         <Select name="UserId" value={values.UserId} onChange={handleChange} onBlur={handleBlur}>
                           <MenuItem value={0}>Seleccionar asesor</MenuItem>
-                          {/* Opción temporal para evitar el warning de MUI cuando el valor actual (usuario logueado) aún no está en la lista cargada */}
                           {!loadingAdvisors && !advisorsError && values.UserId !== 0 && !advisors.some(a => a.Id === values.UserId) && (
                             <MenuItem value={values.UserId} disabled>
                               {(auth?.user as any)?.name || 'Usuario actual'} (cargando permisos)
@@ -493,16 +420,13 @@ const CreateQuotation = () => {
                           {!loadingAdvisors && !advisorsError && advisors.length === 0 && (
                             <MenuItem disabled>No hay asesores disponibles</MenuItem>
                           )}
-                          {advisors.map((user: ApiUser) => (
-                            <MenuItem key={user.Id} value={user.Id}>
-                              {user.name || 'Sin nombre'} {user.LastName || ''}
-                            </MenuItem>
+                          {advisors.map((user: any) => (
+                            <MenuItem key={user.Id} value={user.Id}>{user.name || 'Sin nombre'} {user.LastName || ''}</MenuItem>
                           ))}
                         </Select>
-                        {touched.UserId && errors.UserId && <FormHelperText>{errors.UserId}</FormHelperText>}
+                        {touched.UserId && errors.UserId && <FormHelperText>{String(errors.UserId)}</FormHelperText>}
                       </FormControl>
                     </Grid>
-
                     <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
@@ -515,7 +439,6 @@ const CreateQuotation = () => {
                         helperText={touched.AdvancePayment && errors.AdvancePayment}
                       />
                     </Grid>
-
                     <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
@@ -528,7 +451,6 @@ const CreateQuotation = () => {
                         helperText={touched.LiquidationPayment && errors.LiquidationPayment}
                       />
                     </Grid>
-
                     <Grid size={{ xs: 12, md: 6 }}>
                       <TextField
                         fullWidth
@@ -541,13 +463,11 @@ const CreateQuotation = () => {
                         helperText={touched.TimeCredit && errors.TimeCredit}
                       />
                     </Grid>
-
-                    {/* Campo de Validez movido arriba, debajo de Empresa */}
                   </Grid>
                 </MainCard>
               </Grid>
 
-              {/* Products */}
+              {/* Productos */}
               <Grid size={12}>
                 <MainCard
                   title="Productos"
@@ -570,7 +490,7 @@ const CreateQuotation = () => {
                   }
                 >
                   <FieldArray name="products">
-                    {({ push, remove }) => (
+                    {({ remove }) => (
                       <TableContainer>
                         <Table>
                           <TableHead>
@@ -655,11 +575,9 @@ const CreateQuotation = () => {
                                         Quantity: quantity
                                       });
                                       setFieldValue(`products[${index}]`, updatedProduct);
-
-                                      // Recalculate totals
                                       const updatedProducts = [...values.products];
                                       updatedProducts[index] = updatedProduct;
-                                      const totals = calculateTotals(updatedProducts);
+                                      const totals = calculateTotals(updatedProducts as any);
                                       setFieldValue('SubTotal', totals.SubTotal);
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
@@ -681,11 +599,9 @@ const CreateQuotation = () => {
                                         VendorCost: vendorCost
                                       });
                                       setFieldValue(`products[${index}]`, updatedProduct);
-
-                                      // Recalculate totals
                                       const updatedProducts = [...values.products];
                                       updatedProducts[index] = updatedProduct;
-                                      const totals = calculateTotals(updatedProducts);
+                                      const totals = calculateTotals(updatedProducts as any);
                                       setFieldValue('SubTotal', totals.SubTotal);
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
@@ -707,11 +623,9 @@ const CreateQuotation = () => {
                                         PrintCost: printCost
                                       });
                                       setFieldValue(`products[${index}]`, updatedProduct);
-
-                                      // Recalculate totals
                                       const updatedProducts = [...values.products];
                                       updatedProducts[index] = updatedProduct;
-                                      const totals = calculateTotals(updatedProducts);
+                                      const totals = calculateTotals(updatedProducts as any);
                                       setFieldValue('SubTotal', totals.SubTotal);
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
@@ -733,11 +647,9 @@ const CreateQuotation = () => {
                                         UnitPrice: unitPrice
                                       });
                                       setFieldValue(`products[${index}]`, updatedProduct);
-
-                                      // Recalculate totals
                                       const updatedProducts = [...values.products];
                                       updatedProducts[index] = updatedProduct;
-                                      const totals = calculateTotals(updatedProducts);
+                                      const totals = calculateTotals(updatedProducts as any);
                                       setFieldValue('SubTotal', totals.SubTotal);
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
@@ -767,8 +679,7 @@ const CreateQuotation = () => {
                                     color="error"
                                     onClick={() => {
                                       remove(index);
-                                      // Recalculate totals after removing product
-                                      const updatedProducts = values.products.filter((_, i) => i !== index);
+                                      const updatedProducts = values.products.filter((_, i) => i !== index) as any;
                                       const totals = calculateTotals(updatedProducts);
                                       setFieldValue('SubTotal', totals.SubTotal);
                                       setFieldValue('Tax', totals.Tax);
@@ -795,7 +706,7 @@ const CreateQuotation = () => {
                 </MainCard>
               </Grid>
 
-              {/* Totals */}
+              {/* Totales */}
               <Grid size={12}>
                 <MainCard>
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -816,30 +727,29 @@ const CreateQuotation = () => {
                             {formatCurrencyMXN(values.Total || 0)}
                           </Typography>
                         </Box>
-                        {/* Métricas adicionales */}
                         <Divider />
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                           <Typography variant="caption">Utilidad Total:</Typography>
-                          <Typography variant="caption" color={(values.products.reduce((s: number, p: any) => s + (p.Revenue || 0), 0) >= 0 ? 'success.main' : 'error.main')}>
-                            {formatCurrencyMXN(values.products.reduce((s: number, p: any) => s + (p.Revenue || 0), 0))}
-                          </Typography>
+                            <Typography variant="caption" color={(values.products.reduce((s: number, p: any) => s + (parseFloat(p.Revenue) || 0), 0) >= 0 ? 'success.main' : 'error.main')}>
+                              {formatCurrencyMXN(values.products.reduce((s: number, p: any) => s + (parseFloat(p.Revenue) || 0), 0))}
+                            </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption">Comisión Total:</Typography>
+                          <Typography variant="caption">Comisión Total (10%):</Typography>
                           <Typography variant="caption">
-                            {formatCurrencyMXN(values.products.reduce((s: number, p: any) => s + (p.Commission || 0), 0))}
+                            {formatCurrencyMXN(values.products.reduce((s: number, p: any) => s + (parseFloat(p.Commission) || 0), 0))}
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                           <Typography variant="caption">Margen %:</Typography>
-                          <Typography variant="caption">
-                            {(() => {
-                              const subtotal = values.SubTotal || 0;
-                              const revenue = values.products.reduce((s: number, p: any) => s + (parseFloat(p.Revenue) || 0), 0);
-                              const margin = subtotal > 0 ? (revenue / subtotal) * 100 : 0;
-                              return margin.toFixed(2) + '%';
-                            })()}
-                          </Typography>
+                            <Typography variant="caption">
+                              {(() => {
+                                const subtotal = values.SubTotal || 0;
+                                const revenue = values.products.reduce((s: number, p: any) => s + (parseFloat(p.Revenue) || 0), 0);
+                                const margin = subtotal > 0 ? (revenue / subtotal) * 100 : 0;
+                                return margin.toFixed(2) + '%';
+                              })()}
+                            </Typography>
                         </Box>
                       </Stack>
                     </Box>
@@ -847,36 +757,40 @@ const CreateQuotation = () => {
                 </MainCard>
               </Grid>
 
-              {/* Actions */}
+              {/* Acciones */}
               <Grid size={12}>
                 <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  <Button variant="outlined" onClick={() => navigate('/apps/quotations')}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" variant="contained">
-                    Crear Cotización
-                  </Button>
+                  {quotation?.Id && (
+                    <QuotationPdfViewer quotationId={quotation.Id} quotationNumber={quotation.NumberQuotation} />
+                  )}
+                  <Button variant="outlined" onClick={() => navigate('/quotations')}>Volver</Button>
+                  <Button type="submit" variant="contained">Guardar Cambios</Button>
                 </Stack>
               </Grid>
             </Grid>
+            <ProductAddDialog
+              open={openProductDialog}
+              onClose={() => setOpenProductDialog(false)}
+              onAdd={(prod) => {
+                if (productPushFunction) {
+                  const pCalc = calculateProductTotal(prod);
+                  productPushFunction(pCalc as any);
+                  const updatedProducts = [...values.products, pCalc as any];
+                  const totals = calculateTotals(updatedProducts as any);
+                  setFieldValue('SubTotal', totals.SubTotal);
+                  setFieldValue('Tax', totals.Tax);
+                  setFieldValue('Total', totals.Total);
+                }
+                setOpenProductDialog(false);
+              }}
+            />
+            {/* Dialog PDF reemplazado por componente reutilizable */}
           </Form>
         )}
       </Formik>
-
-      <ProductAddDialog
-        open={openProductDialog}
-        onClose={() => setOpenProductDialog(false)}
-        onAdd={(prod) => {
-          if (productPushFunction) {
-            const pCalc = calculateProductTotal(prod);
-            productPushFunction(pCalc);
-            // Recalcular totales (Formik no está accesible aquí directamente; se recalcula en el grid al editar cantidades)
-          }
-          setOpenProductDialog(false);
-        }}
-      />
     </>
   );
 };
 
-export default CreateQuotation;
+export default EditQuotation;
+

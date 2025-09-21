@@ -23,6 +23,7 @@ export interface AuthProps {
   token?: string | null;
   permissions?: string[];
   menus?: string[]; // menu paths permitidos
+  advancedPermissions?: any[]; // advanced permission objects
 }
 
 export interface AuthActionProps {
@@ -36,6 +37,7 @@ export type JWTContextType = {
   user?: UserProfile | null | undefined;
   permissions?: string[];
   menus?: string[];
+  advancedPermissions?: any[];
   logout: () => void;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;

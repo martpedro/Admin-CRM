@@ -72,7 +72,7 @@ interface Props {
 // ==============================|| REACT TABLE - LIST ||============================== //
 
 function ReactTable({ data, columns, modalToggler }: Props) {
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'name', desc: false }]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'FirstName', desc: false }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState('');

@@ -26,7 +26,9 @@ const PermissionsAssign = Loadable(lazy(() => import('pages/apps/permissions/ass
 // Quotations pages
 const AppQuotationsList = Loadable(lazy(() => import('pages/apps/quotations/list')));
 const AppQuotationsCreate = Loadable(lazy(() => import('pages/apps/quotations/create')));
+const AppQuotationsEdit = Loadable(lazy(() => import('pages/apps/quotations/edit')));
 const AppCompanyList = Loadable(lazy(() => import('pages/apps/company/list')));
+const DashboardHome = Loadable(lazy(() => import('pages/dashboard')));
 
 // console.log('AppInvoiceCreate', AppInvoiceList, AppInvoiceDetails, AppInvoiceEdit);
 // render - sample page
@@ -47,22 +49,16 @@ const MainRoutes = {
           element: <SamplePage />
         },
         {
-          path: 'customer',
-          children: [
-            {
-              path: 'customer-list',
-              element: <AppCustomerList />
-            }
-          ]
+          path: 'dashboard',
+          element: <DashboardHome />
         },
         {
-          path: 'user',
-          children: [
-            {
-              path: 'user-list',
-              element: <AppUserList />
-            }
-          ]
+          path: 'customers',
+          element: <AppCustomerList />
+        },
+        {
+          path: 'users',
+          element: <AppUserList />
         },
         {
           path: 'permissions',
@@ -94,19 +90,14 @@ const MainRoutes = {
             }
           ]
         },
-        {
-          path: 'quotations',
-          children: [
             {
-              path: '',
-              element: <AppQuotationsList />
-            },
-            {
-              path: 'create',
-              element: <AppQuotationsCreate />
+              path: 'quotations',
+              children: [
+                { path: '', element: <AppQuotationsList /> },
+                { path: 'create', element: <AppQuotationsCreate /> },
+                { path: 'edit/:id', element: <AppQuotationsEdit /> }
+              ]
             }
-          ]
-        }
       ]
     },
     {

@@ -1,4 +1,20 @@
 import axiosServices from 'utils/axios';
+import { openSnackbar } from 'api/snackbar';
+import { SnackbarProps } from 'types/snackbar';
+const defaultSnackbar: SnackbarProps = {
+  action: false,
+  open: true,
+  message: '',
+  anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+  variant: 'alert',
+  alert: { color: 'primary', variant: 'filled' },
+  transition: 'Fade',
+  close: false,
+  actionButton: false,
+  maxStack: 3,
+  dense: false,
+  iconVariant: 'usedefault'
+};
 
 export interface RoleItem {
   id: number;
@@ -20,39 +36,74 @@ const mapRole = (r: any): RoleItem => ({
 
 const roleApi = {
   getAll: async (withPermissions = false): Promise<RoleItem[]> => {
-    const response = await axiosServices.get(`${ROLE_API}/All`, {
-      params: { withPermissions }
-    });
-    const items = response.data?.Message || [];
-    return (items as any[]).map(mapRole);
+    try {
+      const response = await axiosServices.get(`${ROLE_API}/All`, {
+        params: { withPermissions }
+      });
+      const items = response.data?.Message || [];
+      openSnackbar({ ...defaultSnackbar, message: 'Roles obtenidos correctamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
+      return (items as any[]).map(mapRole);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Error al obtener roles';
+      openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
+      return [];
+    }
   },
   getById: async (id: number): Promise<RoleItem> => {
-    const response = await axiosServices.get(`${ROLE_API}/${id}`);
-    const item = response.data?.Message || {};
-    return mapRole(item);
+    try {
+      const response = await axiosServices.get(`${ROLE_API}/${id}`);
+      const item = response.data?.Message || {};
+      openSnackbar({ ...defaultSnackbar, message: 'Rol obtenido correctamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
+      return mapRole(item);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Error al obtener rol';
+      openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
+      return {} as RoleItem;
+    }
   },
   create: async (data: { name: string; isActive: boolean; permissions: number[] }): Promise<RoleItem> => {
-    const payload = {
-      name: data.name,
-      isActive: String(data.isActive),
-      permissions: data.permissions
-    };
-    const response = await axiosServices.post(`${ROLE_API}/Create`, payload);
-    return mapRole(response.data?.Message || {});
+    try {
+      const payload = {
+        name: data.name,
+        isActive: String(data.isActive),
+        permissions: data.permissions
+      };
+      const response = await axiosServices.post(`${ROLE_API}/Create`, payload);
+      openSnackbar({ ...defaultSnackbar, message: 'Rol creado correctamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
+      return mapRole(response.data?.Message || {});
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Error al crear rol';
+      openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
+      return {} as RoleItem;
+    }
   },
   update: async (id: number, data: { name: string; isActive: boolean; permissions: number[] }): Promise<RoleItem> => {
-    const payload = {
-      id,
-      name: data.name,
-      isActive: String(data.isActive),
-      permissions: data.permissions
-    };
-    const response = await axiosServices.put(`${ROLE_API}/Update`, payload);
-    return mapRole(response.data?.Message || {});
+    try {
+      const payload = {
+        id,
+        name: data.name,
+        isActive: String(data.isActive),
+        permissions: data.permissions
+      };
+      const response = await axiosServices.put(`${ROLE_API}/Update`, payload);
+      openSnackbar({ ...defaultSnackbar, message: 'Rol actualizado correctamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
+      return mapRole(response.data?.Message || {});
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Error al actualizar rol';
+      openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
+      return {} as RoleItem;
+    }
   },
   remove: async (id: number): Promise<{ deleted: boolean } | any> => {
-    const response = await axiosServices.delete(`${ROLE_API}/Delete/${id}`);
-    return response.data?.Message ?? { deleted: true };
+    try {
+      const response = await axiosServices.delete(`${ROLE_API}/Delete/${id}`);
+      openSnackbar({ ...defaultSnackbar, message: 'Rol eliminado correctamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
+      return response.data?.Message ?? { deleted: true };
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Error al eliminar rol';
+      openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
+      return { deleted: false, error: errorMessage };
+    }
   }
 };
 

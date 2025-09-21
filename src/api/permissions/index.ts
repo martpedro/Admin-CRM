@@ -3,6 +3,7 @@ import useSWR, { mutate } from 'swr';
 
 // project-imports
 import { fetcher } from 'utils/axios';
+import axiosServices from 'utils/axios';
 
 // types
 import { 
@@ -251,145 +252,60 @@ export function useGetUsers() {
 // ==============================|| Permission Actions ||============================== //
 
 export async function createPermission(newPermission: Partial<PermissionAdvanced>) {
-  const response = await fetch(`${endpoints.key}${endpoints.create}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(newPermission)
+  const response = await axiosServices.post(`${endpoints.key}${endpoints.create}`, newPermission, {
+    headers: { 'Content-Type': 'application/json' }
   });
-
-  if (!response.ok) {
-    throw new Error('Failed to create permission');
-  }
-
-  const result = await response.json();
-  
-  // Revalidate permissions list
   mutate(`${endpoints.key}${endpoints.list}`);
-  
-  return result;
+  return response.data;
 }
 
 export async function assignPermission(request: PermissionAssignRequest) {
-  const response = await fetch(`${endpoints.key}${endpoints.assign}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(request)
+  const response = await axiosServices.post(`${endpoints.key}${endpoints.assign}`, request, {
+    headers: { 'Content-Type': 'application/json' }
   });
-
-  if (!response.ok) {
-    throw new Error('Failed to assign permission');
-  }
-
-  const result = await response.json();
-  
-  // Revalidate user permissions
   mutate(`${endpoints.key}${endpoints.userPermissions}/${request.userId}`);
-  
-  return result;
+  return response.data;
 }
 
 export async function revokePermission(request: PermissionRevokeRequest) {
-  const response = await fetch(`${endpoints.key}${endpoints.revoke}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(request)
+  const response = await axiosServices.post(`${endpoints.key}${endpoints.revoke}`, request, {
+    headers: { 'Content-Type': 'application/json' }
   });
-
-  if (!response.ok) {
-    throw new Error('Failed to revoke permission');
-  }
-
-  const result = await response.json();
-  
-  // Revalidate user permissions
   mutate(`${endpoints.key}${endpoints.userPermissions}/${request.userId}`);
-  
-  return result;
+  return response.data;
 }
 
 export async function checkPermission(userId: number, permissionKey: string): Promise<boolean> {
-  const response = await fetch(`${endpoints.key}${endpoints.check}/${userId}/${permissionKey}`);
-  
-  if (!response.ok) {
-    throw new Error('Failed to check permission');
-  }
-
-  const result = await response.json();
-  return result.hasPermission;
+  const response = await axiosServices.get(`${endpoints.key}${endpoints.check}/${userId}/${permissionKey}`);
+  return response.data?.hasPermission ?? false;
 }
 
 export async function getUserDataScope(userId: number, module: string): Promise<DataScopeResponse> {
-  const response = await fetch(`${endpoints.key}${endpoints.dataScope}/${userId}/${module}`);
-  
-  if (!response.ok) {
-    throw new Error('Failed to get data scope');
-  }
-
-  return response.json();
+  const response = await axiosServices.get(`${endpoints.key}${endpoints.dataScope}/${userId}/${module}`);
+  return response.data;
 }
 
 // ==============================|| Team Actions ||============================== //
 
 export async function createTeam(teamData: TeamCreateRequest) {
-  const response = await fetch(`${teamEndpoints.key}${teamEndpoints.create}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(teamData)
+  const response = await axiosServices.post(`${teamEndpoints.key}${teamEndpoints.create}`, teamData, {
+    headers: { 'Content-Type': 'application/json' }
   });
-
-  if (!response.ok) {
-    throw new Error('Failed to create team');
-  }
-
-  const result = await response.json();
-  
-  // Revalidate teams list
   mutate(`${teamEndpoints.key}${teamEndpoints.list}`);
-  
-  return result;
+  return response.data;
 }
 
 export async function updateTeam(teamData: TeamUpdateRequest) {
-  const response = await fetch(`${teamEndpoints.key}${teamEndpoints.update}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(teamData)
+  const response = await axiosServices.put(`${teamEndpoints.key}${teamEndpoints.update}`, teamData, {
+    headers: { 'Content-Type': 'application/json' }
   });
-
-  if (!response.ok) {
-    throw new Error('Failed to update team');
-  }
-
-  const result = await response.json();
-  
-  // Revalidate teams list
   mutate(`${teamEndpoints.key}${teamEndpoints.list}`);
-  
-  return result;
+  return response.data;
 }
 
 export async function deleteTeam(teamId: number) {
-  const response = await fetch(`${teamEndpoints.key}${teamEndpoints.delete}/${teamId}`, {
-    method: 'DELETE'
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to delete team');
-  }
-
-  // Revalidate teams list
+  await axiosServices.delete(`${teamEndpoints.key}${teamEndpoints.delete}/${teamId}`);
   mutate(`${teamEndpoints.key}${teamEndpoints.list}`);
-  
   return true;
 }
 

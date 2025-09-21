@@ -17,8 +17,7 @@ const Users: NavItemType = {
   id: 'users',
   title: 'Usuarios',
   type: 'group',
-  url: '/user/user-list',
-  // url: '/users',
+  url: '/users',
   icon: icons.users
 };
 

@@ -17,7 +17,7 @@ const customer: NavItemType = {
   id: 'customers',
   title: 'Clientes',
   type: 'group',
-  url: '/customer/customer-list',
+  url: '/customers',
   icon: icons.customer
 };
 

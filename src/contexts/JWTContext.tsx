@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useReducer } from 'react';
+import React, { createContext, useEffect, useReducer, useState } from 'react';
 
 // third-party
 import { Chance } from 'chance';
@@ -11,6 +11,7 @@ import authReducer from 'contexts/auth-reducer/auth';
 // project-imports
 import Loader from 'components/Loader';
 import axios from 'utils/axios';
+import { fetchAllAdvancedPermissions } from 'api/permissions-advanced';
 
 // types
 import { AuthProps, JWTContextType } from 'types/auth';
@@ -52,64 +53,60 @@ const JWTContext = createContext<JWTContextType | null>(null);
 
 export const JWTProvider = ({ children }: { children: React.ReactElement }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const [advancedPermissions, setAdvancedPermissions] = useState<any[]>([]);
+
+  // Carga catálogo y cruza con keys efectivas
+  const loadPermissionsCatalog = async (effectiveKeys: string[]) => {
+    try {
+      const catalog = await fetchAllAdvancedPermissions();
+      if (effectiveKeys && effectiveKeys.length > 0) {
+        const filtered = catalog.filter((p) => effectiveKeys.some(k => k.toLowerCase() === (p.key || '').toLowerCase()));
+        setAdvancedPermissions(filtered);
+      } else {
+        setAdvancedPermissions([]);
+      }
+    } catch (e) {
+      console.error('Error cargando catálogo de permisos', e);
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
       try {
         const serviceToken = window.localStorage.getItem('serviceToken');
         if (serviceToken && verifyToken(serviceToken)) {
-          // First set the session to configure axios defaults
           setSession(serviceToken);
-          
-          // Then make the API call with explicit headers as backup
           const response = await axios.get('/api/account/me', {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${serviceToken}`
-            }
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceToken}` }
           });
           const { Message } = response.data;
-          const user = Message?.user || Message; // Handle both { Message: { user: {...} } } and { Message: {...} }
-          
+          const payload = Message?.user ? Message : { user: Message?.user, permissions: Message?.permissions, menus: Message?.menus };
+          const user = payload.user || Message?.user || null;
+          const permissions = payload.permissions || [];
+
           dispatch({
             type: LOGIN,
-            payload: {
-              isLoggedIn: true,
-              user,
-              permissions: Message?.permissions,
-              menus: Message?.menus
-            }
+            payload: { isLoggedIn: true, user, permissions, menus: payload.menus }
           });
+          await loadPermissionsCatalog(permissions);
         } else {
-          dispatch({
-            type: LOGOUT
-          });
+          dispatch({ type: LOGOUT });
         }
       } catch (err) {
         console.error(err);
-        dispatch({
-          type: LOGOUT
-        });
+        dispatch({ type: LOGOUT });
       }
     };
-
     init();
   }, []);
 
   const login = async (email: string, password: string) => {
-  const response = await axios.post('api/Auth/signIn', { email, password });
-  const { Message: { serviceToken, user, permissions, menus } } = response.data;
-
+    const response = await axios.post('api/Auth/signIn', { email, password });
+    const { Message } = response.data;
+    const { serviceToken, user, menus, permissions = [] } = Message;
     setSession(serviceToken);
-    dispatch({
-      type: LOGIN,
-      payload: {
-        isLoggedIn: true,
-        user,
-        permissions,
-        menus
-      }
-    });
+    dispatch({ type: LOGIN, payload: { isLoggedIn: true, user, permissions, menus } });
+    await loadPermissionsCatalog(permissions);
   };
 
   const register = async (email: string, password: string, firstName: string, lastName: string) => {
@@ -143,6 +140,7 @@ export const JWTProvider = ({ children }: { children: React.ReactElement }) => {
   const logout = () => {
     setSession(null);
     dispatch({ type: LOGOUT });
+    setAdvancedPermissions([]);
   };
 
   const resetPassword = async (email: string) => {
@@ -155,7 +153,7 @@ export const JWTProvider = ({ children }: { children: React.ReactElement }) => {
     return <Loader />;
   }
 
-  return <JWTContext.Provider value={{ ...state, login, logout, register, resetPassword, updateProfile }}>{children}</JWTContext.Provider>;
+  return <JWTContext.Provider value={{ ...state, advancedPermissions, login, logout, register, resetPassword, updateProfile }}>{children}</JWTContext.Provider>;
 };
 
 export default JWTContext;

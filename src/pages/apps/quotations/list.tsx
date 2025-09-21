@@ -37,6 +37,12 @@ import { useQuotations, useQuotationOperations } from 'hooks/useQuotations';
 
 // assets
 import { Add, Edit, Trash, Eye, SearchNormal1 } from 'iconsax-react';
+import QuotationPdfViewer from 'components/quotations/QuotationPdfViewer';
+import SendQuotationEmailDialog from 'components/quotations/SendQuotationEmailDialog';
+import DeleteQuotationDialog from 'components/quotations/DeleteQuotationDialog';
+import Loader from 'components/Loader';
+import axiosServices from 'utils/axios';
+import { sendQuotationEmail } from 'api/quotations';
 
 // types
 import { Quotation } from 'api/quotations';
@@ -51,6 +57,12 @@ interface StatusTab {
 }
 
 const QuotationsList = () => {
+  const [openSendEmail, setOpenSendEmail] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [quotationToSend, setQuotationToSend] = useState<null | Quotation>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const theme = useTheme();
   const navigate = useNavigate();
   const intl = useIntl();
@@ -61,12 +73,30 @@ const QuotationsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<StatusKey>('todas');
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm(intl.formatMessage({ id: 'confirm-delete-quotation' }))) {
-      const result = await deleteQuotation(id);
-      if (!result.success) {
-        alert(result.error);
-      }
+  const handleDelete = (quotation: Quotation) => {
+    setQuotationToDelete(quotation);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!quotationToDelete) return;
+
+    setDeleting(true);
+    const result = await deleteQuotation(quotationToDelete.Id);
+    setDeleting(false);
+
+    if (result.success) {
+      setDeleteDialogOpen(false);
+      setQuotationToDelete(null);
+    } else {
+      alert(result.error);
+    }
+  };
+
+  const handleCloseDeleteDialog = () => {
+    if (!deleting) {
+      setDeleteDialogOpen(false);
+      setQuotationToDelete(null);
     }
   };
 
@@ -74,7 +104,7 @@ const QuotationsList = () => {
     const created = new Date(createdAt);
     const now = new Date();
     const daysDiff = (now.getTime() - created.getTime()) / (1000 * 3600 * 24);
-    
+
     if (daysDiff <= 7) return 'recientes';
     if (daysDiff <= 30) return 'vigentes';
     return 'vencidas';
@@ -83,10 +113,14 @@ const QuotationsList = () => {
   const getStatusColor = (createdAt: string) => {
     const category = getStatusCategory(createdAt);
     switch (category) {
-      case 'recientes': return 'success';
-      case 'vigentes': return 'warning';
-      case 'vencidas': return 'error';
-      default: return 'default';
+      case 'recientes':
+        return 'success';
+      case 'vigentes':
+        return 'warning';
+      case 'vencidas':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
@@ -94,7 +128,7 @@ const QuotationsList = () => {
     const created = new Date(createdAt);
     const now = new Date();
     const daysDiff = Math.floor((now.getTime() - created.getTime()) / (1000 * 3600 * 24));
-    
+
     if (daysDiff === 0) return intl.formatMessage({ id: 'today' });
     if (daysDiff <= 7) return `${daysDiff} ${intl.formatMessage({ id: 'days' })}`;
     if (daysDiff <= 30) return `${daysDiff} ${intl.formatMessage({ id: 'days' })}`;
@@ -123,7 +157,7 @@ const QuotationsList = () => {
       vencidas: 0
     };
 
-    quotationsData.forEach(quotation => {
+    quotationsData.forEach((quotation) => {
       counts[quotation.statusCategory]++;
     });
 
@@ -144,18 +178,19 @@ const QuotationsList = () => {
 
     // Filtrar por estado
     if (activeTab !== 'todas') {
-      filtered = filtered.filter(quotation => quotation.statusCategory === activeTab);
+      filtered = filtered.filter((quotation) => quotation.statusCategory === activeTab);
     }
 
     // Filtrar por búsqueda
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(quotation =>
-        quotation.NumberQuotation?.toLowerCase().includes(term) ||
-        quotation.customerName.toLowerCase().includes(term) ||
-        quotation.advisorName.toLowerCase().includes(term) ||
-        quotation.companyName.toLowerCase().includes(term) ||
-        quotation.Customer?.Email?.toLowerCase().includes(term)
+      filtered = filtered.filter(
+        (quotation) =>
+          quotation.NumberQuotation?.toLowerCase().includes(term) ||
+          quotation.customerName.toLowerCase().includes(term) ||
+          quotation.advisorName.toLowerCase().includes(term) ||
+          quotation.companyName.toLowerCase().includes(term) ||
+          quotation.Customer?.Email?.toLowerCase().includes(term)
       );
     }
 
@@ -171,18 +206,18 @@ const QuotationsList = () => {
       </MainCard>
     );
   }
+  if (isLoading) {
+    return <Loader message="Cargando cotizaciones..." />;
+  }
 
   return (
     <>
       <Breadcrumbs
-        links={[
-          { title: intl.formatMessage({ id: 'home' }), to: '/' },
-          { title: intl.formatMessage({ id: 'quotations' }) }
-        ]}
+        links={[{ title: intl.formatMessage({ id: 'home' }), to: '/' }, { title: intl.formatMessage({ id: 'quotations' }) }]}
         title
         rightAlign
       />
-      
+
       {/* Header con búsqueda y botón crear */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <OutlinedInput
@@ -197,7 +232,7 @@ const QuotationsList = () => {
           placeholder={intl.formatMessage({ id: 'search-placeholder' })}
           sx={{ width: { xs: '100%', sm: 400 } }}
         />
-        
+
         <Button
           variant="contained"
           startIcon={<Add />}
@@ -237,33 +272,56 @@ const QuotationsList = () => {
             <TableHead>
               <TableRow>
                 <TableCell>#</TableCell>
-                <TableCell><FormattedMessage id="quotation-number" /></TableCell>
-                <TableCell><FormattedMessage id="customer" /></TableCell>
-                <TableCell><FormattedMessage id="advisor" /></TableCell>
-                <TableCell><FormattedMessage id="company" /></TableCell>
-                <TableCell align="right"><FormattedMessage id="subtotal" /></TableCell>
-                <TableCell align="right"><FormattedMessage id="taxes" /></TableCell>
-                <TableCell align="right"><FormattedMessage id="total" /></TableCell>
-                <TableCell><FormattedMessage id="date" /></TableCell>
-                <TableCell><FormattedMessage id="status" /></TableCell>
-                <TableCell align="center"><FormattedMessage id="actions" /></TableCell>
+                <TableCell>
+                  <FormattedMessage id="quotation-number" />
+                </TableCell>
+                <TableCell>
+                  <FormattedMessage id="customer" />
+                </TableCell>
+                <TableCell>
+                  <FormattedMessage id="advisor" />
+                </TableCell>
+                <TableCell>
+                  <FormattedMessage id="company" />
+                </TableCell>
+                <TableCell align="right">
+                  <FormattedMessage id="subtotal" />
+                </TableCell>
+                <TableCell align="right">
+                  <FormattedMessage id="taxes" />
+                </TableCell>
+                <TableCell align="right">
+                  <FormattedMessage id="total" />
+                </TableCell>
+                <TableCell>
+                  <FormattedMessage id="date" />
+                </TableCell>
+                <TableCell>
+                  <FormattedMessage id="status" />
+                </TableCell>
+                <TableCell align="center">
+                  <FormattedMessage id="actions" />
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={11} align="center">
-                    <Typography><FormattedMessage id="loading-quotations" /></Typography>
+                    <Typography>
+                      <FormattedMessage id="loading-quotations" />
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : filteredQuotations.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={11} align="center">
                     <Typography>
-                      {searchTerm || activeTab !== 'todas' 
-                        ? <FormattedMessage id="no-quotations-found" />
-                        : <FormattedMessage id="no-quotations-registered" />
-                      }
+                      {searchTerm || activeTab !== 'todas' ? (
+                        <FormattedMessage id="no-quotations-found" />
+                      ) : (
+                        <FormattedMessage id="no-quotations-registered" />
+                      )}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -297,14 +355,10 @@ const QuotationsList = () => {
                       <Typography variant="body2">{quotation.companyName}</Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Typography variant="body2">
-                        ${quotation.SubTotal?.toLocaleString('es-CO') || '0'}
-                      </Typography>
+                      <Typography variant="body2">${quotation.SubTotal?.toLocaleString('es-CO') || '0'}</Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Typography variant="body2">
-                        ${quotation.Tax?.toLocaleString('es-CO') || '0'}
-                      </Typography>
+                      <Typography variant="body2">${quotation.Tax?.toLocaleString('es-CO') || '0'}</Typography>
                     </TableCell>
                     <TableCell align="right">
                       <Typography variant="subtitle2" color="primary">
@@ -315,40 +369,76 @@ const QuotationsList = () => {
                       <Typography variant="body2">{quotation.formattedDate}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={quotation.status}
-                        color={quotation.statusColor as any}
-                        size="small"
-                        variant="light"
-                      />
+                      <Chip label={quotation.status} color={quotation.statusColor as any} size="small" variant="light" />
                     </TableCell>
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.5} justifyContent="center">
-                        <Tooltip title={intl.formatMessage({ id: 'view-details' })}>
-                          <IconButton
-                            color="secondary"
-                            onClick={() => navigate(`/quotations/view/${quotation.Id}`)}
-                          >
-                            <Eye />
-                          </IconButton>
-                        </Tooltip>
+                        <QuotationPdfViewer
+                          quotationId={quotation.Id}
+                          quotationNumber={quotation.NumberQuotation}
+                          variant="icon"
+                          label={intl.formatMessage({ id: 'view-pdf' }) || 'Ver PDF'}
+                        />
                         <Tooltip title={intl.formatMessage({ id: 'edit' })}>
-                          <IconButton
-                            color="primary"
-                            onClick={() => navigate(`/quotations/edit/${quotation.Id}`)}
-                          >
+                          <IconButton color="primary" onClick={() => navigate(`/quotations/edit/${quotation.Id}`)}>
                             <Edit />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title={intl.formatMessage({ id: 'delete' })}>
+                        <Tooltip title="Enviar por correo">
                           <IconButton
-                            color="error"
-                            onClick={() => handleDelete(quotation.Id)}
+                            color="info"
+                            onClick={() => {
+                              setQuotationToSend(quotation);
+                              setOpenSendEmail(true);
+                            }}
                           >
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                              <path
+                                d="M2 6.5V17.5C2 19.43 3.57 21 5.5 21H18.5C20.43 21 22 19.43 22 17.5V6.5C22 4.57 20.43 3 18.5 3H5.5C3.57 3 2 4.57 2 6.5ZM4.5 6.5L12 13.5L19.5 6.5"
+                                stroke="#1976d2"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title={intl.formatMessage({ id: 'delete' })}>
+                          <IconButton color="error" onClick={() => handleDelete(quotation)}>
                             <Trash />
                           </IconButton>
                         </Tooltip>
                       </Stack>
+                      <SendQuotationEmailDialog
+                        open={openSendEmail}
+                        onClose={() => {
+                          setOpenSendEmail(false);
+                          setQuotationToSend(null);
+                        }}
+                        loading={sendingEmail}
+                        defaultTo={quotationToSend?.Customer?.Email || ''}
+                        quotation={quotationToSend || undefined}
+                        onSend={async ({ to, cc, message }) => {
+                          if (!quotationToSend) return;
+                          setSendingEmail(true);
+                          try {
+                            await sendQuotationEmail({
+                              quotationId: quotationToSend.Id,
+                              to,
+                              cc,
+                              message,
+                              quotation: quotationToSend
+                            });
+                            setOpenSendEmail(false);
+                            setQuotationToSend(null);
+                            alert('Correo enviado correctamente');
+                          } catch (err: any) {
+                            alert('Error al enviar el correo');
+                          } finally {
+                            setSendingEmail(false);
+                          }
+                        }}
+                      />
                     </TableCell>
                   </TableRow>
                 ))
@@ -357,6 +447,14 @@ const QuotationsList = () => {
           </Table>
         </TableContainer>
       </MainCard>
+
+      <DeleteQuotationDialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        onConfirm={confirmDelete}
+        quotationNumber={quotationToDelete?.NumberQuotation}
+        loading={deleting}
+      />
     </>
   );
 };

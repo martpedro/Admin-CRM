@@ -1,10 +1,10 @@
-import useSWR from 'swr';
+import useSWR, { mutate as globalMutate } from 'swr';
 import { quotationsApi, Quotation } from '../api/quotations';
 
 // Hook para obtener todas las cotizaciones
 export const useQuotations = () => {
   const { data, error, isLoading, mutate } = useSWR<Quotation[]>(
-    '/api/quotations/all',
+    'quotation:list',
     quotationsApi.getAll,
     {
       revalidateOnFocus: false,
@@ -24,7 +24,7 @@ export const useQuotations = () => {
 export const useQuotation = (id: number | null) => {
   const shouldFetch = id !== null;
   const { data, error, isLoading, mutate } = useSWR<Quotation>(
-    shouldFetch ? `/api/quotations/${id}` : null,
+    shouldFetch ? ['quotation:item', id] : null,
     shouldFetch ? () => quotationsApi.getById(id!) : null,
     {
       revalidateOnFocus: false,
@@ -42,12 +42,11 @@ export const useQuotation = (id: number | null) => {
 
 // Hook para operaciones de cotizaciones (crear, actualizar, eliminar)
 export const useQuotationOperations = () => {
-  const { refreshQuotations } = useQuotations();
 
   const createQuotation = async (quotationData: any) => {
     try {
-      const result = await quotationsApi.create(quotationData);
-      refreshQuotations(); // Refresh the list after creating
+  const result = await quotationsApi.create(quotationData);
+  await globalMutate('quotation:list');
       return { success: true, data: result };
     } catch (error: any) {
       console.error('Error creating quotation:', error);
@@ -60,8 +59,8 @@ export const useQuotationOperations = () => {
 
   const updateQuotation = async (quotationData: any) => {
     try {
-      const result = await quotationsApi.update(quotationData);
-      refreshQuotations(); // Refresh the list after updating
+  const result = await quotationsApi.update(quotationData);
+  await globalMutate('quotation:list');
       return { success: true, data: result };
     } catch (error: any) {
       console.error('Error updating quotation:', error);
@@ -74,8 +73,8 @@ export const useQuotationOperations = () => {
 
   const deleteQuotation = async (id: number) => {
     try {
-      await quotationsApi.delete(id);
-      refreshQuotations(); // Refresh the list after deleting
+  await quotationsApi.delete(id);
+  await globalMutate('quotation:list');
       return { success: true };
     } catch (error: any) {
       console.error('Error deleting quotation:', error);

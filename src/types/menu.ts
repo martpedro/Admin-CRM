@@ -35,6 +35,7 @@ export type NavItemType = {
   type?: string;
   url?: string | undefined;
   actions?: NavActionProps[];
+  requiredPermissions?: string[]; // NUEVO: lista de permisos requeridos para mostrar el item
 };
 
 export type LinkTarget = '_blank' | '_self' | '_parent' | '_top';

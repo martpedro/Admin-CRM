@@ -1,4 +1,8 @@
-import { assignPermission, useGetPermissions } from 'api/permissions';
+// LEGACY: Utilidades temporales para pruebas de asignación directa a usuario.
+// Nuevo modelo: usar endpoints de rol -> /permissions-advanced/admin/full-reset-role-model/:roleId
+// y derivar permisos vía /account/me. Este archivo se eliminará cuando se migren vistas dependientes.
+
+// Helper utilities to manage permissions during development/testing
 
 // Función para asignar todos los permisos al usuario con ID 1
 export const assignAllPermissionsToUser1 = async () => {

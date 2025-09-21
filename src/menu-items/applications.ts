@@ -54,6 +54,12 @@ const applications: NavItemType = {
       ]
     },
     {
+      id: 'dashboard',
+      title: 'Dashboard',
+      type: 'item',
+      url: '/dashboard'
+    },
+    {
       id: 'profile',
       title: 'profile',
       type: 'collapse',
