@@ -1,11 +1,11 @@
 import useSWR, { mutate as globalMutate } from 'swr';
-import { quotationsApi, Quotation } from '../api/quotations';
+import { quotationsApi, Quotation, refreshQuotationsCache } from '../api/quotations';
 
-// Hook para obtener todas las cotizaciones
-export const useQuotations = () => {
+// Hook para obtener todas las cotizaciones con filtro opcional por estado
+export const useQuotations = (status?: string) => {
   const { data, error, isLoading, mutate } = useSWR<Quotation[]>(
-    'quotation:list',
-    quotationsApi.getAll,
+    status ? `quotation:list:${status}` : 'quotation:list',
+    () => quotationsApi.getAll(status),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
@@ -45,8 +45,9 @@ export const useQuotationOperations = () => {
 
   const createQuotation = async (quotationData: any) => {
     try {
-  const result = await quotationsApi.create(quotationData);
-  await globalMutate('quotation:list');
+      const result = await quotationsApi.create(quotationData);
+      // Usar función centralizada para invalidar cache
+      await refreshQuotationsCache();
       return { success: true, data: result };
     } catch (error: any) {
       console.error('Error creating quotation:', error);
@@ -59,8 +60,9 @@ export const useQuotationOperations = () => {
 
   const updateQuotation = async (quotationData: any) => {
     try {
-  const result = await quotationsApi.update(quotationData);
-  await globalMutate('quotation:list');
+      const result = await quotationsApi.update(quotationData);
+      // Usar función centralizada para invalidar cache
+      await refreshQuotationsCache(quotationData.Id);
       return { success: true, data: result };
     } catch (error: any) {
       console.error('Error updating quotation:', error);
@@ -73,8 +75,9 @@ export const useQuotationOperations = () => {
 
   const deleteQuotation = async (id: number) => {
     try {
-  await quotationsApi.delete(id);
-  await globalMutate('quotation:list');
+      await quotationsApi.delete(id);
+      // Usar función centralizada para invalidar cache
+      await refreshQuotationsCache();
       return { success: true };
     } catch (error: any) {
       console.error('Error deleting quotation:', error);
@@ -85,10 +88,26 @@ export const useQuotationOperations = () => {
     }
   };
 
+  const updateQuotationStatus = async (id: number, status: 'Nueva' | 'En proceso' | 'Cerrada') => {
+    try {
+      const result = await quotationsApi.updateStatus(id, status);
+      // Invalidar todas las listas de cotizaciones (con y sin filtros)
+      await globalMutate(/^quotation:list/);
+      return { success: true, data: result };
+    } catch (error: any) {
+      console.error('Error updating quotation status:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.Message || error.message || 'Error al actualizar el estado' 
+      };
+    }
+  };
+
   return {
     createQuotation,
     updateQuotation,
     deleteQuotation,
+    updateQuotationStatus,
   };
 };
 

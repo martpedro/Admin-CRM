@@ -29,11 +29,14 @@ import {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FormattedMessage, useIntl } from 'react-intl';
+import { enqueueSnackbar } from 'notistack';
+import { mutate } from 'swr';
 
 // project-imports
 import Breadcrumbs from 'components/@extended/Breadcrumbs';
 import MainCard from 'components/MainCard';
 import { useQuotations, useQuotationOperations } from 'hooks/useQuotations';
+import QuotationStatusChip from 'components/quotations/QuotationStatusChip';
 
 // assets
 import { Add, Edit, Trash, Eye, SearchNormal1 } from 'iconsax-react';
@@ -41,14 +44,13 @@ import QuotationPdfViewer from 'components/quotations/QuotationPdfViewer';
 import SendQuotationEmailDialog from 'components/quotations/SendQuotationEmailDialog';
 import DeleteQuotationDialog from 'components/quotations/DeleteQuotationDialog';
 import Loader from 'components/Loader';
-import axiosServices from 'utils/axios';
 import { sendQuotationEmail } from 'api/quotations';
 
 // types
 import { Quotation } from 'api/quotations';
 
 // types for status
-type StatusKey = 'todas' | 'recientes' | 'vigentes' | 'vencidas';
+type StatusKey = 'todas' | 'Nueva' | 'En proceso' | 'Cerrada';
 
 interface StatusTab {
   key: StatusKey;
@@ -63,15 +65,37 @@ const QuotationsList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const theme = useTheme();
-  const navigate = useNavigate();
-  const intl = useIntl();
-  const { quotations, isLoading, error } = useQuotations();
-  const { deleteQuotation } = useQuotationOperations();
-
   const [selectedQuotation, setSelectedQuotation] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<StatusKey>('todas');
+  const [statusChangeLoading, setStatusChangeLoading] = useState<number | null>(null);
+  
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const intl = useIntl();
+  
+  const statusFilter = activeTab === 'todas' ? undefined : activeTab;
+  const { quotations, isLoading, error } = useQuotations(statusFilter);
+  const { deleteQuotation, updateQuotationStatus } = useQuotationOperations();
+
+  // Función para cambiar estado de cotización
+  const handleStatusChange = async (quotationId: number, newStatus: 'Nueva' | 'En proceso' | 'Cerrada') => {
+    setStatusChangeLoading(quotationId);
+    try {
+      await updateQuotationStatus(quotationId, newStatus);
+      // Refrescar todas las listas de cotizaciones usando las claves correctas de SWR
+      mutate('quotation:list');
+      mutate('quotation:list:Nueva');
+      mutate('quotation:list:En proceso');
+      mutate('quotation:list:Cerrada');
+      enqueueSnackbar('Estado actualizado correctamente', { variant: 'success' });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      enqueueSnackbar('Error al actualizar el estado', { variant: 'error' });
+    } finally {
+      setStatusChangeLoading(null);
+    }
+  };
 
   const handleDelete = (quotation: Quotation) => {
     setQuotationToDelete(quotation);
@@ -88,8 +112,9 @@ const QuotationsList = () => {
     if (result.success) {
       setDeleteDialogOpen(false);
       setQuotationToDelete(null);
+      enqueueSnackbar('Cotización eliminada correctamente', { variant: 'success' });
     } else {
-      alert(result.error);
+      enqueueSnackbar(result.error || 'Error al eliminar la cotización', { variant: 'error' });
     }
   };
 
@@ -100,86 +125,40 @@ const QuotationsList = () => {
     }
   };
 
-  const getStatusCategory = (createdAt: string): StatusKey => {
-    const created = new Date(createdAt);
-    const now = new Date();
-    const daysDiff = (now.getTime() - created.getTime()) / (1000 * 3600 * 24);
-
-    if (daysDiff <= 7) return 'recientes';
-    if (daysDiff <= 30) return 'vigentes';
-    return 'vencidas';
-  };
-
-  const getStatusColor = (createdAt: string) => {
-    const category = getStatusCategory(createdAt);
-    switch (category) {
-      case 'recientes':
-        return 'success';
-      case 'vigentes':
-        return 'warning';
-      case 'vencidas':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
-  const getStatusText = (createdAt: string) => {
-    const created = new Date(createdAt);
-    const now = new Date();
-    const daysDiff = Math.floor((now.getTime() - created.getTime()) / (1000 * 3600 * 24));
-
-    if (daysDiff === 0) return intl.formatMessage({ id: 'today' });
-    if (daysDiff <= 7) return `${daysDiff} ${intl.formatMessage({ id: 'days' })}`;
-    if (daysDiff <= 30) return `${daysDiff} ${intl.formatMessage({ id: 'days' })}`;
-    return `${daysDiff} ${intl.formatMessage({ id: 'days-expired' })}`;
-  };
-
   const quotationsData = useMemo(() => {
     return quotations.map((quotation: Quotation) => ({
       ...quotation,
       customerName: `${quotation.Customer?.Name || ''} ${quotation.Customer?.LastName || ''}`.trim(),
       advisorName: `${quotation.User?.Name || ''} ${quotation.User?.LastNAme || ''}`.trim(),
       companyName: quotation.Company?.Name || '',
-      formattedDate: format(new Date(quotation.CreatedAt), 'dd/MM/yyyy', { locale: es }),
-      status: getStatusText(quotation.CreatedAt),
-      statusColor: getStatusColor(quotation.CreatedAt),
-      statusCategory: getStatusCategory(quotation.CreatedAt)
+      formattedDate: format(new Date(quotation.CreatedAt), 'dd/MM/yyyy', { locale: es })
     }));
   }, [quotations]);
 
-  // Calcular conteos para tabs
-  const statusCounts = useMemo(() => {
-    const counts = {
-      todas: quotationsData.length,
-      recientes: 0,
-      vigentes: 0,
-      vencidas: 0
-    };
+  // Calcular conteos para tabs usando hook separado para cada estado
+  const { quotations: allQuotations } = useQuotations();
+  const { quotations: newQuotations } = useQuotations('Nueva');
+  const { quotations: inProcessQuotations } = useQuotations('En proceso'); 
+  const { quotations: closedQuotations } = useQuotations('Cerrada');
 
-    quotationsData.forEach((quotation) => {
-      counts[quotation.statusCategory]++;
-    });
-
-    return counts;
-  }, [quotationsData]);
+  const statusCounts = useMemo(() => ({
+    todas: allQuotations.length,
+    Nueva: newQuotations.length,
+    'En proceso': inProcessQuotations.length,
+    Cerrada: closedQuotations.length
+  }), [allQuotations.length, newQuotations.length, inProcessQuotations.length, closedQuotations.length]);
 
   // Crear tabs con conteos
   const statusTabs: StatusTab[] = [
-    { key: 'todas', label: intl.formatMessage({ id: 'all' }), count: statusCounts.todas },
-    { key: 'recientes', label: intl.formatMessage({ id: 'recent' }), count: statusCounts.recientes },
-    { key: 'vigentes', label: intl.formatMessage({ id: 'valid' }), count: statusCounts.vigentes },
-    { key: 'vencidas', label: intl.formatMessage({ id: 'expired' }), count: statusCounts.vencidas }
+    { key: 'todas', label: 'Todas', count: statusCounts.todas },
+    { key: 'Nueva', label: 'Nuevas', count: statusCounts.Nueva },
+    { key: 'En proceso', label: 'En Proceso', count: statusCounts['En proceso'] },
+    { key: 'Cerrada', label: 'Cerradas', count: statusCounts.Cerrada }
   ];
 
-  // Filtrar cotizaciones
+  // Filtrar cotizaciones solo por búsqueda (el estado ya está filtrado por el hook)
   const filteredQuotations = useMemo(() => {
     let filtered = quotationsData;
-
-    // Filtrar por estado
-    if (activeTab !== 'todas') {
-      filtered = filtered.filter((quotation) => quotation.statusCategory === activeTab);
-    }
 
     // Filtrar por búsqueda
     if (searchTerm) {
@@ -195,7 +174,7 @@ const QuotationsList = () => {
     }
 
     return filtered;
-  }, [quotationsData, activeTab, searchTerm]);
+  }, [quotationsData, searchTerm]);
 
   if (error) {
     return (
@@ -369,7 +348,33 @@ const QuotationsList = () => {
                       <Typography variant="body2">{quotation.formattedDate}</Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip label={quotation.status} color={quotation.statusColor as any} size="small" variant="light" />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <QuotationStatusChip status={quotation.Status || 'Nueva'} />
+                        {quotation.Status !== 'Cerrada' && (
+                          <Tooltip title="Cambiar estado">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => {
+                                const nextStatus = quotation.Status === 'Nueva' ? 'En proceso' : 'Cerrada';
+                                handleStatusChange(quotation.Id, nextStatus);
+                              }}
+                              disabled={statusChangeLoading === quotation.Id}
+                            >
+                              {statusChangeLoading === quotation.Id ? (
+                                <svg width="16" height="16" viewBox="0 0 24 24">
+                                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" strokeDasharray="31.416" strokeDashoffset="31.416">
+                                    <animate attributeName="stroke-dashoffset" dur="2s" values="31.416;0" repeatCount="indefinite"/>
+                                  </circle>
+                                </svg>
+                              ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                  <path d="M7 13l3 3 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
                     </TableCell>
                     <TableCell align="center">
                       <Stack direction="row" spacing={0.5} justifyContent="center">
@@ -431,9 +436,16 @@ const QuotationsList = () => {
                             });
                             setOpenSendEmail(false);
                             setQuotationToSend(null);
-                            alert('Correo enviado correctamente');
+                            
+                            // Refrescar todas las listas de cotizaciones usando las claves correctas de SWR
+                            mutate('quotation:list');
+                            mutate('quotation:list:Nueva');
+                            mutate('quotation:list:En proceso');
+                            mutate('quotation:list:Cerrada');
+                            
+                            enqueueSnackbar('Correo enviado correctamente', { variant: 'success' });
                           } catch (err: any) {
-                            alert('Error al enviar el correo');
+                            enqueueSnackbar('Error al enviar el correo', { variant: 'error' });
                           } finally {
                             setSendingEmail(false);
                           }

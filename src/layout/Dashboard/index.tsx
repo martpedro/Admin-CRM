@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 
 // material-ui
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -38,10 +38,12 @@ export default function MainLayout() {
   const { menuMasterLoading } = useGetMenuMaster();
   const downXL = useMediaQuery((theme) => theme.breakpoints.down('xl'));
   const downLG = useMediaQuery((theme) => theme.breakpoints.down('lg'));
+  const location = useLocation();
 
   const { container, miniDrawer, menuOrientation } = useConfig();
 
   const isHorizontal = menuOrientation === MenuOrientation.HORIZONTAL && !downLG;
+  const isHomePage = location.pathname === '/' || location.pathname === '/inicio';
 
   // set media wise responsive drawer
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function MainLayout() {
               flexDirection: 'column'
             }}
           >
-            <Breadcrumbs />
+            {!isHomePage && <Breadcrumbs />}
             <Outlet />
             <Footer />
           </Container>

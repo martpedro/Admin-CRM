@@ -55,9 +55,9 @@ const applications: NavItemType = {
     },
     {
       id: 'dashboard',
-      title: 'Dashboard',
+      title: 'Inicio',
       type: 'item',
-      url: '/dashboard'
+      url: '/inicio'
     },
     {
       id: 'profile',

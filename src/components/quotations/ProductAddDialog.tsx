@@ -126,10 +126,22 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Mostrar vista previa
+      // Validar tamaño del archivo (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        enqueueSnackbar('La imagen es muy grande. Máximo 5MB.', { variant: 'warning' });
+        return;
+      }
+      
+      // Mostrar vista previa de forma optimizada
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        // Usar requestAnimationFrame para evitar bloqueo del hilo principal
+        requestAnimationFrame(() => {
+          setImagePreview(reader.result as string);
+        });
+      };
+      reader.onerror = () => {
+        enqueueSnackbar('Error al cargar la imagen', { variant: 'error' });
       };
       reader.readAsDataURL(file);
       setManualProduct(prev => ({ ...prev, ImageFile: file, Origin: 'manual' }));
@@ -165,7 +177,21 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
                 onInputChange={(e, value) => {
                   setSearchCode(value);
                   if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-                  searchDebounceRef.current = setTimeout(() => fetchPredictiveProducts(value), 400);
+                  
+                  // Solo buscar si hay al menos 2 caracteres
+                  if (value.trim().length >= 2) {
+                    searchDebounceRef.current = setTimeout(() => {
+                      // Usar requestIdleCallback si está disponible, sino setTimeout
+                      if (window.requestIdleCallback) {
+                        window.requestIdleCallback(() => fetchPredictiveProducts(value));
+                      } else {
+                        fetchPredictiveProducts(value);
+                      }
+                    }, 500); // Aumentar debounce a 500ms
+                  } else {
+                    // Limpiar resultados si hay menos de 2 caracteres
+                    setSearchOptions([]);
+                  }
                 }}
                 onChange={(e, value: any) => {
                   if (value) {

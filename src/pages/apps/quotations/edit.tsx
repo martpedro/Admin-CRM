@@ -10,12 +10,14 @@ import {
   CardHeader,
   Divider,
   FormControl,
+  FormControlLabel,
   FormHelperText,
   IconButton,
   InputLabel,
   MenuItem,
   Select,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -29,7 +31,6 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { Add, Trash } from 'iconsax-react';
-import { enqueueSnackbar } from 'notistack';
 import ProductAddDialog, { ProductWithOrigin } from 'components/quotations/ProductAddDialog';
 import Breadcrumbs from 'components/@extended/Breadcrumbs';
 import MainCard from 'components/MainCard';
@@ -45,7 +46,8 @@ import QuotationPdfViewer from 'components/quotations/QuotationPdfViewer';
 import Loader from 'components/Loader';
 import SendQuotationEmailDialog from 'components/quotations/SendQuotationEmailDialog';
 import axiosServices from 'utils/axios';
-import { sendQuotationEmail } from 'api/quotations';
+import { sendQuotationEmail, refreshQuotationsCache } from 'api/quotations';
+import { useNotifications } from 'utils/notifications';
 
 const validationSchema = Yup.object({
   CustomerId: Yup.number().required('El cliente es requerido'),
@@ -60,8 +62,10 @@ const validationSchema = Yup.object({
 });
 
 const EditQuotation = () => {
+  const notifications = useNotifications();
   const [openSendEmail, setOpenSendEmail] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [savingAndSending, setSavingAndSending] = useState(false);
   const { id } = useParams();
   const quotationId = Number(id);
   const navigate = useNavigate();
@@ -160,24 +164,56 @@ const EditQuotation = () => {
 
   const handleSubmit = async (values: any) => {
     try {
-      const formData = new FormData();
-      // Copiar productos sin ImageFile
-      const productsForJson = (values.products || []).map((p: any) => {
-        const { ImageFile, ...rest } = p;
-        return { ...rest };
-      });
-      const jsonData = { ...values, products: productsForJson };
-      formData.append('data', JSON.stringify(jsonData));
-      (values.products || []).forEach((p: any, index: number) => {
-        if (p.ImageFile instanceof File) {
-          formData.append(`productImage_${index}`, p.ImageFile);
-        }
-      });
-      const axios = (await import('utils/axios')).default;
-      const response = await axios.put('/api/Quotation/Update', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      enqueueSnackbar('Cotización actualizada', { variant: 'success' });
+      const result = await updateQuotation(values);
+      console.log('Resultado de actualización:', result);
+
+      if (result.success) {
+        console.log('Resultado mensaje de actualización:', result);
+
+        notifications.success('Cotización actualizada');
+        // Usar función centralizada para refrescar cache
+        await refreshQuotationsCache(quotationId);
+      } else {
+        notifications.error(result.error || 'Error al actualizar');
+      }
     } catch (e: any) {
-      enqueueSnackbar(e?.message || 'Error al actualizar', { variant: 'error' });
+      notifications.error(e?.message || 'Error al actualizar');
+    }
+  };
+
+  const handleSaveAndSendEmail = async (values: any) => {
+    if (!selectedCustomer?.Email) {
+      notifications.warning('El cliente no tiene email registrado');
+      return;
+    }
+
+    setSavingAndSending(true);
+    try {
+      // Primero guardar la cotización usando la API
+      const updateResult = await updateQuotation(values);
+      if (!updateResult.success) {
+        notifications.error(updateResult.error || 'Error al guardar la cotización');
+        return;
+      }
+      
+      // Luego enviar por correo
+      if (quotation?.Id) {
+        await sendQuotationEmail({
+          quotationId: quotation.Id,
+          to: selectedCustomer.Email,
+          cc: '',
+          message: `Estimado/a ${selectedCustomer.Name},\n\nEsperamos que se encuentre bien. Adjunto encontrará la cotización #${quotation.NumberQuotation} solicitada.\n\nQuedamos a la espera de sus comentarios.\n\nSaludos cordiales.`
+        });
+      }
+      
+      // Usar función centralizada para refrescar cache
+      await refreshQuotationsCache(quotationId);
+      
+      notifications.success('Cotización guardada y enviada por correo exitosamente');
+    } catch (e: any) {
+      notifications.error(e?.message || 'Error al guardar y enviar');
+    } finally {
+      setSavingAndSending(false);
     }
   };
 
@@ -249,10 +285,10 @@ const EditQuotation = () => {
                                                 cc,
                                                 message
                                               });
-                                              enqueueSnackbar('Correo enviado correctamente', { variant: 'success' });
+                                              notifications.success('Correo enviado correctamente');
                                               setOpenSendEmail(false);
                                             } catch (err: any) {
-                                              enqueueSnackbar('Error al enviar el correo', { variant: 'error' });
+                                              notifications.error('Error al enviar el correo');
                                             } finally {
                                               setSendingEmail(false);
                                             }
@@ -496,13 +532,15 @@ const EditQuotation = () => {
                           <TableHead>
                             <TableRow>
                               <TableCell>Imagen</TableCell>
+                              <TableCell>Código Proveedor</TableCell>
                               <TableCell>Código</TableCell>
                               <TableCell>Especificaciones</TableCell>
-                              <TableCell>Tintas</TableCell>
+                              <TableCell>Detalle de Impresión</TableCell>
                               <TableCell>Tiempo de Entrega</TableCell>
                               <TableCell>Cantidad</TableCell>
                               <TableCell>Costo</TableCell>
-                              <TableCell>Impresión</TableCell>
+                              <TableCell>Costo de Impresión</TableCell>
+                              <TableCell>% de Utilidad</TableCell>
                               <TableCell>Precio Unitario</TableCell>
                               <TableCell>Total</TableCell>
                               <TableCell>Utilidad</TableCell>
@@ -518,6 +556,47 @@ const EditQuotation = () => {
                                       {product.Code?.charAt(0) || 'P'}
                                     </Avatar>
                                     <Chip size="small" label={product.Origin === 'catalog' ? 'Catálogo' : 'Manual'} color={product.Origin === 'catalog' ? 'primary' : 'default'} />
+                                  </Box>
+                                </TableCell>
+                                <TableCell>
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <TextField
+                                      size="small"
+                                      name={`products[${index}].CodeVendor`}
+                                      value={product.CodeVendor || ''}
+                                      onChange={handleChange}
+                                      placeholder="Código proveedor"
+                                      sx={{ minWidth: 120 }}
+                                    />
+                                    <FormControlLabel
+                                      control={
+                                        <Switch
+                                          size="small"
+                                          name={`products[${index}].ExtraProfit`}
+                                          checked={(product as any).ExtraProfit || false}
+                                          onChange={(e) => {
+                                            const updatedProduct = calculateProductTotal({
+                                              ...product,
+                                              ExtraProfit: e.target.checked
+                                            });
+                                            setFieldValue(`products[${index}]`, updatedProduct);
+                                            const updatedProducts = [...values.products];
+                                            updatedProducts[index] = updatedProduct;
+                                            const totals = calculateTotals(updatedProducts as any);
+                                            setFieldValue('SubTotal', totals.SubTotal);
+                                            setFieldValue('Tax', totals.Tax);
+                                            setFieldValue('Total', totals.Total);
+                                          }}
+                                        />
+                                      }
+                                      label="Utilidad extra"
+                                      sx={{ 
+                                        fontSize: '0.75rem',
+                                        '& .MuiFormControlLabel-label': { 
+                                          fontSize: '0.75rem' 
+                                        }
+                                      }}
+                                    />
                                   </Box>
                                 </TableCell>
                                 <TableCell>
@@ -545,11 +624,13 @@ const EditQuotation = () => {
                                 <TableCell>
                                   <TextField
                                     size="small"
-                                    name={`products[${index}].Inks`}
-                                    value={product.Inks || ''}
+                                    name={`products[${index}].PrintDetails`}
+                                    value={(product as any).PrintDetails || ''}
                                     onChange={handleChange}
-                                    placeholder="Tintas"
-                                    sx={{ minWidth: 100 }}
+                                    placeholder="Detalle de impresión"
+                                    multiline
+                                    rows={2}
+                                    sx={{ minWidth: 180 }}
                                   />
                                 </TableCell>
                                 <TableCell>
@@ -606,7 +687,7 @@ const EditQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 0, step: 0.01 }}
+                                    inputProps={{ min: 0, step: 1 }}
                                     sx={{ width: 100 }}
                                   />
                                 </TableCell>
@@ -630,7 +711,7 @@ const EditQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 0, step: 0.01 }}
+                                    inputProps={{ min: 0, step: 1 }}
                                     sx={{ width: 100 }}
                                   />
                                 </TableCell>
@@ -638,13 +719,13 @@ const EditQuotation = () => {
                                   <TextField
                                     size="small"
                                     type="number"
-                                    name={`products[${index}].UnitPrice`}
-                                    value={product.UnitPrice || 0}
+                                    name={`products[${index}].ProfitMargin`}
+                                    value={(product as any).ProfitMargin !== undefined ? (product as any).ProfitMargin : 30}
                                     onChange={(e) => {
-                                      const unitPrice = parseFloat(e.target.value) || 0;
+                                      const profitMargin = e.target.value === '' ? 30 : parseFloat(e.target.value);
                                       const updatedProduct = calculateProductTotal({
                                         ...product,
-                                        UnitPrice: unitPrice
+                                        ProfitMargin: profitMargin
                                       });
                                       setFieldValue(`products[${index}]`, updatedProduct);
                                       const updatedProducts = [...values.products];
@@ -654,9 +735,18 @@ const EditQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 0, step: 0.01 }}
-                                    sx={{ width: 120 }}
+                                    placeholder="30"
+                                    inputProps={{ min: 0, step: 1 }}
+                                    sx={{ width: 80 }}
+                                    InputProps={{
+                                      endAdornment: '%'
+                                    }}
                                   />
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2" sx={{ minWidth: 80, fontWeight: 'bold' }}>
+                                    {formatCurrencyMXN(product.UnitPrice || 0)}
+                                  </Typography>
                                 </TableCell>
                                 <TableCell>
                                   <Typography variant="body2" sx={{ minWidth: 80 }}>
@@ -693,7 +783,7 @@ const EditQuotation = () => {
                             ))}
                             {values.products.length === 0 && (
                               <TableRow>
-                                <TableCell colSpan={12} align="center">
+                                <TableCell colSpan={14} align="center">
                                   <Typography color="textSecondary">No hay productos agregados</Typography>
                                 </TableCell>
                               </TableRow>
@@ -728,29 +818,7 @@ const EditQuotation = () => {
                           </Typography>
                         </Box>
                         <Divider />
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption">Utilidad Total:</Typography>
-                            <Typography variant="caption" color={(values.products.reduce((s: number, p: any) => s + (parseFloat(p.Revenue) || 0), 0) >= 0 ? 'success.main' : 'error.main')}>
-                              {formatCurrencyMXN(values.products.reduce((s: number, p: any) => s + (parseFloat(p.Revenue) || 0), 0))}
-                            </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption">Comisión Total (10%):</Typography>
-                          <Typography variant="caption">
-                            {formatCurrencyMXN(values.products.reduce((s: number, p: any) => s + (parseFloat(p.Commission) || 0), 0))}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption">Margen %:</Typography>
-                            <Typography variant="caption">
-                              {(() => {
-                                const subtotal = values.SubTotal || 0;
-                                const revenue = values.products.reduce((s: number, p: any) => s + (parseFloat(p.Revenue) || 0), 0);
-                                const margin = subtotal > 0 ? (revenue / subtotal) * 100 : 0;
-                                return margin.toFixed(2) + '%';
-                              })()}
-                            </Typography>
-                        </Box>
+                        
                       </Stack>
                     </Box>
                   </Box>
@@ -765,6 +833,15 @@ const EditQuotation = () => {
                   )}
                   <Button variant="outlined" onClick={() => navigate('/quotations')}>Volver</Button>
                   <Button type="submit" variant="contained">Guardar Cambios</Button>
+                  <Button 
+                    variant="contained" 
+                    color="secondary"
+                    disabled={savingAndSending || !selectedCustomer?.Email}
+                    onClick={() => handleSaveAndSendEmail(values)}
+                    startIcon={savingAndSending ? <CircularProgress size={20} /> : undefined}
+                  >
+                    {savingAndSending ? 'Guardando y Enviando...' : 'Guardar y Enviar por Correo'}
+                  </Button>
                 </Stack>
               </Grid>
             </Grid>

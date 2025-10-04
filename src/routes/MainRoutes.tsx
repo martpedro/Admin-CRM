@@ -45,12 +45,16 @@ const MainRoutes = {
       element: <DashboardLayout />,
       children: [
         {
-          path: 'sample-page',
-          element: <SamplePage />
+          index: true,
+          element: <DashboardHome />
         },
         {
-          path: 'dashboard',
+          path: 'inicio',
           element: <DashboardHome />
+        },
+        {
+          path: 'sample-page',
+          element: <SamplePage />
         },
         {
           path: 'customers',

@@ -29,6 +29,7 @@ import {
   TextField,
   Typography,
   FormControl,
+  FormControlLabel,
   FormHelperText,
   Dialog,
   DialogTitle,
@@ -36,12 +37,14 @@ import {
   DialogActions,
   Tab,
   Tabs,
-  Avatar
+  Avatar,
+  Switch,
+  CircularProgress
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 
 // third-party
-import { enqueueSnackbar } from 'notistack';
+import { useSnackbar } from 'notistack';
 
 // project-imports
 import Breadcrumbs from 'components/@extended/Breadcrumbs';
@@ -50,7 +53,7 @@ import { useQuotationOperations } from 'hooks/useQuotations';
 import { useCustomers } from 'hooks/useCustomers';
 // import { useUsers } from 'hooks/useUsers';
 import { useCompanies, useCompanyOperations } from 'hooks/useCompanies';
-import quotationsApi from 'api/quotations';
+import quotationsApi, { sendQuotationEmail } from 'api/quotations';
 import JWTContext from 'contexts/JWTContext';
 
 // assets
@@ -83,6 +86,7 @@ const CreateQuotation = () => {
   const auth = useContext(JWTContext);
   const currentUserId = (auth?.user as any)?.Id || (auth?.user as any)?.id || 0;
   const { createQuotation } = useQuotationOperations();
+  const { enqueueSnackbar } = useSnackbar();
   const { customers } = useCustomers();
   const [advisors, setAdvisors] = useState<ApiUser[]>([]);
   const [loadingAdvisors, setLoadingAdvisors] = useState(false);
@@ -131,6 +135,7 @@ const CreateQuotation = () => {
 
   const [productPushFunction, setProductPushFunction] = useState<((obj: any) => void) | null>(null);
   const [emissionDate, setEmissionDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [creatingAndSending, setCreatingAndSending] = useState(false);
 
   // Actualizar initialUserId cuando cambie usuario logueado
   useEffect(() => {
@@ -161,26 +166,7 @@ const CreateQuotation = () => {
 
   const handleSubmit = async (values: QuotationCreate) => {
     try {
-      // Construir payload para enviar via FormData
-      const formData = new FormData();
-      // Clonar productos para limpiar campos de sólo front
-      const productsForJson = values.products.map((p: any, idx: number) => {
-        const { ImageFile, ...rest } = p;
-        return { ...rest };
-      });
-      const jsonData = { ...values, products: productsForJson };
-      formData.append('data', JSON.stringify(jsonData));
-      // Adjuntar archivos (solo manuales con ImageFile)
-      values.products.forEach((p: any, index: number) => {
-        if (p.ImageFile instanceof File) {
-          formData.append(`productImage_${index}`, p.ImageFile);
-        }
-      });
-      // Usar axios directamente (provisional) hasta adaptar quotationsApi
-      const response = await (await import('utils/axios')).default.post('/api/Quotation/Create', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      const result = { success: true, data: response.data?.Message ?? response.data };
+      const result = await createQuotation(values);
       if (result.success) {
         const created = result.data;
         enqueueSnackbar('Cotización creada exitosamente', { variant: 'success' });
@@ -192,10 +178,49 @@ const CreateQuotation = () => {
           navigate('/quotations');
         }
       } else {
+        enqueueSnackbar(result.error || 'Error al crear la cotización', { variant: 'error' });
+      }
+    } catch (error: any) {
+      enqueueSnackbar(error?.message || 'Error inesperado al crear la cotización', { variant: 'error' });
+    }
+  };
+
+  const handleCreateAndSendEmail = async (values: QuotationCreate) => {
+    const selectedCustomer = customers.find((c: any) => c.Id === values.CustomerId);
+    if (!selectedCustomer?.Email) {
+      enqueueSnackbar('El cliente no tiene email registrado', { variant: 'warning' });
+      return;
+    }
+
+    setCreatingAndSending(true);
+    try {
+      // Primero crear la cotización usando la API
+      const createResult = await createQuotation(values);
+      if (!createResult.success) {
+        enqueueSnackbar(createResult.error || 'Error al crear la cotización', { variant: 'error' });
+        return;
+      }
+      
+      const created = createResult.data;
+      
+      // Luego enviar por correo si se creó exitosamente
+      if (created && created.Id) {
+        await sendQuotationEmail({
+          quotationId: created.Id,
+          to: selectedCustomer.Email,
+          cc: '',
+          message: `Estimado/a ${selectedCustomer.Name},\n\nEsperamos que se encuentre bien. Adjunto encontrará la cotización #${created.NumberQuotation} solicitada.\n\nQuedamos a la espera de sus comentarios.\n\nSaludos cordiales.`
+        });
+        
+        enqueueSnackbar('Cotización creada y enviada por correo exitosamente', { variant: 'success' });
+        navigate(`/quotations/edit/${created.Id}`);
+      } else {
         enqueueSnackbar('Error al crear la cotización', { variant: 'error' });
       }
-    } catch (error) {
-      enqueueSnackbar('Error inesperado al crear la cotización', { variant: 'error' });
+    } catch (error: any) {
+      enqueueSnackbar(error?.message || 'Error al crear y enviar la cotización', { variant: 'error' });
+    } finally {
+      setCreatingAndSending(false);
     }
   };
 
@@ -576,13 +601,15 @@ const CreateQuotation = () => {
                           <TableHead>
                             <TableRow>
                               <TableCell>Imagen</TableCell>
+                              <TableCell>Código Proveedor</TableCell>
                               <TableCell>Código</TableCell>
                               <TableCell>Especificaciones</TableCell>
-                              <TableCell>Tintas</TableCell>
+                              <TableCell>Detalle de Impresión</TableCell>
                               <TableCell>Tiempo de Entrega</TableCell>
                               <TableCell>Cantidad</TableCell>
                               <TableCell>Costo</TableCell>
-                              <TableCell>Impresión</TableCell>
+                              <TableCell>Costo de Impresión</TableCell>
+                              <TableCell>% de Utilidad</TableCell>
                               <TableCell>Precio Unitario</TableCell>
                               <TableCell>Total</TableCell>
                               <TableCell>Utilidad</TableCell>
@@ -598,6 +625,47 @@ const CreateQuotation = () => {
                                       {product.Code?.charAt(0) || 'P'}
                                     </Avatar>
                                     <Chip size="small" label={product.Origin === 'catalog' ? 'Catálogo' : 'Manual'} color={product.Origin === 'catalog' ? 'primary' : 'default'} />
+                                  </Box>
+                                </TableCell>
+                                <TableCell>
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    <TextField
+                                      size="small"
+                                      name={`products[${index}].CodeVendor`}
+                                      value={product.CodeVendor || ''}
+                                      onChange={handleChange}
+                                      placeholder="Código proveedor"
+                                      sx={{ minWidth: 120 }}
+                                    />
+                                    <FormControlLabel
+                                      control={
+                                        <Switch
+                                          size="small"
+                                          name={`products[${index}].ExtraProfit`}
+                                          checked={(product as any).ExtraProfit || false}
+                                          onChange={(e) => {
+                                            const updatedProduct = calculateProductTotal({
+                                              ...product,
+                                              ExtraProfit: e.target.checked
+                                            });
+                                            setFieldValue(`products[${index}]`, updatedProduct);
+                                            const updatedProducts = [...values.products];
+                                            updatedProducts[index] = updatedProduct;
+                                            const totals = calculateTotals(updatedProducts as any);
+                                            setFieldValue('SubTotal', totals.SubTotal);
+                                            setFieldValue('Tax', totals.Tax);
+                                            setFieldValue('Total', totals.Total);
+                                          }}
+                                        />
+                                      }
+                                      label="Utilidad extra"
+                                      sx={{ 
+                                        fontSize: '0.75rem',
+                                        '& .MuiFormControlLabel-label': { 
+                                          fontSize: '0.75rem' 
+                                        }
+                                      }}
+                                    />
                                   </Box>
                                 </TableCell>
                                 <TableCell>
@@ -625,11 +693,13 @@ const CreateQuotation = () => {
                                 <TableCell>
                                   <TextField
                                     size="small"
-                                    name={`products[${index}].Inks`}
-                                    value={product.Inks || ''}
+                                    name={`products[${index}].PrintDetails`}
+                                    value={(product as any).PrintDetails || ''}
                                     onChange={handleChange}
-                                    placeholder="Tintas"
-                                    sx={{ minWidth: 100 }}
+                                    placeholder="Detalle de impresión"
+                                    multiline
+                                    rows={2}
+                                    sx={{ minWidth: 180 }}
                                   />
                                 </TableCell>
                                 <TableCell>
@@ -690,7 +760,7 @@ const CreateQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 0, step: 0.01 }}
+                                    inputProps={{ min: 0, step: 1 }}
                                     sx={{ width: 100 }}
                                   />
                                 </TableCell>
@@ -716,7 +786,7 @@ const CreateQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 0, step: 0.01 }}
+                                    inputProps={{ min: 0, step: 1 }}
                                     sx={{ width: 100 }}
                                   />
                                 </TableCell>
@@ -724,13 +794,13 @@ const CreateQuotation = () => {
                                   <TextField
                                     size="small"
                                     type="number"
-                                    name={`products[${index}].UnitPrice`}
-                                    value={product.UnitPrice || 0}
+                                    name={`products[${index}].ProfitMargin`}
+                                    value={(product as any).ProfitMargin !== undefined ? (product as any).ProfitMargin : 30}
                                     onChange={(e) => {
-                                      const unitPrice = parseFloat(e.target.value) || 0;
+                                      const profitMargin = e.target.value === '' ? 30 : parseFloat(e.target.value);
                                       const updatedProduct = calculateProductTotal({
                                         ...product,
-                                        UnitPrice: unitPrice
+                                        ProfitMargin: profitMargin
                                       });
                                       setFieldValue(`products[${index}]`, updatedProduct);
 
@@ -742,9 +812,18 @@ const CreateQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 0, step: 0.01 }}
-                                    sx={{ width: 120 }}
+                                    placeholder="30"
+                                    inputProps={{ min: 0, step: 1 }}
+                                    sx={{ width: 80 }}
+                                    InputProps={{
+                                      endAdornment: '%'
+                                    }}
                                   />
+                                </TableCell>
+                                <TableCell>
+                                  <Typography variant="body2" sx={{ minWidth: 80, fontWeight: 'bold' }}>
+                                    {formatCurrencyMXN(product.UnitPrice || 0)}
+                                  </Typography>
                                 </TableCell>
                                 <TableCell>
                                   <Typography variant="body2" sx={{ minWidth: 80 }}>
@@ -782,7 +861,7 @@ const CreateQuotation = () => {
                             ))}
                             {values.products.length === 0 && (
                               <TableRow>
-                                <TableCell colSpan={12} align="center">
+                                <TableCell colSpan={14} align="center">
                                   <Typography color="textSecondary">No hay productos agregados</Typography>
                                 </TableCell>
                               </TableRow>
@@ -817,30 +896,7 @@ const CreateQuotation = () => {
                           </Typography>
                         </Box>
                         {/* Métricas adicionales */}
-                        <Divider />
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption">Utilidad Total:</Typography>
-                          <Typography variant="caption" color={(values.products.reduce((s: number, p: any) => s + (p.Revenue || 0), 0) >= 0 ? 'success.main' : 'error.main')}>
-                            {formatCurrencyMXN(values.products.reduce((s: number, p: any) => s + (p.Revenue || 0), 0))}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption">Comisión Total:</Typography>
-                          <Typography variant="caption">
-                            {formatCurrencyMXN(values.products.reduce((s: number, p: any) => s + (p.Commission || 0), 0))}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography variant="caption">Margen %:</Typography>
-                          <Typography variant="caption">
-                            {(() => {
-                              const subtotal = values.SubTotal || 0;
-                              const revenue = values.products.reduce((s: number, p: any) => s + (parseFloat(p.Revenue) || 0), 0);
-                              const margin = subtotal > 0 ? (revenue / subtotal) * 100 : 0;
-                              return margin.toFixed(2) + '%';
-                            })()}
-                          </Typography>
-                        </Box>
+                        
                       </Stack>
                     </Box>
                   </Box>
@@ -855,6 +911,15 @@ const CreateQuotation = () => {
                   </Button>
                   <Button type="submit" variant="contained">
                     Crear Cotización
+                  </Button>
+                  <Button 
+                    variant="contained" 
+                    color="secondary"
+                    disabled={creatingAndSending || !customers.find((c: any) => c.Id === values.CustomerId)?.Email}
+                    onClick={() => handleCreateAndSendEmail(values)}
+                    startIcon={creatingAndSending ? <CircularProgress size={20} /> : undefined}
+                  >
+                    {creatingAndSending ? 'Creando y Enviando...' : 'Crear y Enviar por Correo'}
                   </Button>
                 </Stack>
               </Grid>

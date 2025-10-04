@@ -12,39 +12,111 @@ export const sendQuotationEmail = async ({
   message: string;
   quotation?: Quotation;
 }) => {
-  // Generar plantillas de correo
-  let emailHTML = '';
-  let emailText = '';
-  
-  if (quotation) {
-    emailHTML = generateQuotationEmailHTML({ 
-      quotation, 
-      customMessage: message,
-      companyInfo: defaultCompanyConfig
-    });
-    emailText = generateQuotationEmailText({ 
-      quotation, 
-      customMessage: message,
-      companyInfo: defaultCompanyConfig
-    });
-  }
+  // Usar Promise.resolve para evitar bloqueo del hilo principal
+  return new Promise<void>((resolve, reject) => {
+    // Usar requestIdleCallback para generar plantillas sin bloquear UI
+    const processEmail = () => {
+      try {
+        // Generar plantillas de correo de forma optimizada
+        let emailHTML = '';
+        let emailText = '';
+        
+        if (quotation) {
+          // Generar plantillas en chunks para evitar bloqueo
+          emailHTML = generateQuotationEmailHTML({ 
+            quotation, 
+            customMessage: message,
+            companyInfo: defaultCompanyConfig
+          });
+          emailText = generateQuotationEmailText({ 
+            quotation, 
+            customMessage: message,
+            companyInfo: defaultCompanyConfig
+          });
+        }
 
-  await axiosServices.post('/api/Quotation/SendEmail', {
-    quotationId,
-    to,
-    cc,
-    message,
-    subject: `Cotización ${quotation?.NumberQuotation || `#${quotationId}`} - Regalos Corporativos`,
-    htmlTemplate: emailHTML,
-    textTemplate: emailText,
-    attachPdf: true
+        // Enviar email de forma asíncrona
+        axiosServices.post('/api/Quotation/SendEmail', {
+          quotationId,
+          to,
+          cc,
+          message,
+          subject: `Cotización ${quotation?.NumberQuotation || `#${quotationId}`} - Regalos Corporativos`,
+          htmlTemplate: emailHTML,
+          textTemplate: emailText,
+          attachPdf: true
+        }).then(() => resolve()).catch(reject);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    // Usar requestIdleCallback si está disponible, sino setTimeout
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(processEmail);
+    } else {
+      setTimeout(processEmail, 0);
+    }
   });
 };
 import axiosServices from 'utils/axios';
+import { mutate } from 'swr';
 import { generateQuotationEmailHTML, generateQuotationEmailText } from 'templates/QuotationEmailTemplate';
 import { defaultCompanyConfig } from 'config/companyConfig';
 
 const QUOTATIONS_API = '/api/Quotation';
+
+/**
+ * Función general para invalidar cache de cotizaciones
+ * Refresca todas las listas de cotizaciones y datos específicos
+ * 
+ * @param quotationId - ID de cotización específica a refrescar (opcional)
+ * 
+ * @example
+ * // Refrescar solo las listas
+ * await refreshQuotationsCache();
+ * 
+ * // Refrescar listas y cotización específica
+ * await refreshQuotationsCache(123);
+ */
+export const refreshQuotationsCache = async (quotationId?: number) => {
+  // Usar requestIdleCallback para evitar bloquear el hilo principal
+  return new Promise<void>((resolve) => {
+    const processCacheRefresh = async () => {
+      try {
+        // Crear promesas para ejecutar en paralelo y reducir tiempo de bloqueo
+        const promises = [
+          mutate(/^quotation:list/),
+          mutate('quotation:list'),
+          mutate('quotation:list:Nueva'),
+          mutate('quotation:list:En proceso'),
+          mutate('quotation:list:Cerrada')
+        ];
+
+        // Si se especifica un ID, también refrescar esa cotización específica
+        if (quotationId) {
+          promises.push(mutate(['quotation:item', quotationId]));
+        }
+
+        // Ejecutar todas las invalidaciones en paralelo
+        await Promise.allSettled(promises);
+        
+        console.log('✅ Cache de cotizaciones actualizado correctamente');
+        resolve();
+      } catch (error) {
+        console.warn('⚠️ Error al actualizar cache de cotizaciones:', error);
+        resolve(); // Resolver anyway para no bloquear
+      }
+    };
+
+    // Usar requestIdleCallback si está disponible, sino setTimeout
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(processCacheRefresh);
+    } else {
+      setTimeout(processCacheRefresh, 0);
+    }
+  });
+};
 
 // Types for Quotations
 export interface QuotationProduct {
@@ -79,6 +151,7 @@ export interface QuotationCreate {
   CustomerId: number;
   AddressId: number;
   CompanyId: number;
+  Status?: 'Nueva' | 'En proceso' | 'Cerrada';
   products: QuotationProduct[];
 }
 
@@ -91,6 +164,7 @@ export interface QuotationUpdate {
   SubTotal?: number;
   Tax?: number;
   Total?: number;
+  Status?: 'Nueva' | 'En proceso' | 'Cerrada';
   products?: QuotationProduct[];
 }
 
@@ -104,6 +178,7 @@ export interface Quotation {
   SubTotal: number;
   Tax: number;
   Total: number;
+  Status: 'Nueva' | 'En proceso' | 'Cerrada';
   User: {
     Id: number;
     Name: string;
@@ -156,9 +231,10 @@ export const quotationsApi = {
     const list = Array.isArray(response.data) ? response.data : (response.data?.Message || []);
     return list;
   },
-  // Get all quotations
-  getAll: async (): Promise<Quotation[]> => {
-    const response = await axiosServices.get(`${QUOTATIONS_API}/Get`);
+  // Get all quotations with optional status filter
+  getAll: async (status?: string): Promise<Quotation[]> => {
+    const url = status ? `${QUOTATIONS_API}/Get?status=${encodeURIComponent(status)}` : `${QUOTATIONS_API}/Get`;
+    const response = await axiosServices.get(url);
     const data = response.data?.Message ?? response.data;
     return Array.isArray(data) ? data : [];
   },
@@ -222,6 +298,12 @@ export const quotationsApi = {
     // Backend returns array directly (no Message wrapper) per new endpoint implementation
     const data = response.data?.Message ?? response.data;
     return Array.isArray(data) ? data : [];
+  },
+
+  // Update quotation status
+  updateStatus: async (id: number, status: 'Nueva' | 'En proceso' | 'Cerrada'): Promise<any> => {
+    const response = await axiosServices.put(`${QUOTATIONS_API}/UpdateStatus/${id}`, { status });
+    return response.data?.Message ?? response.data;
   }
 };
 

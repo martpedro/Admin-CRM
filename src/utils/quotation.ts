@@ -15,13 +15,28 @@ export const TAX_RATE = 0.16; // IVA 16%
 
 export const calculateProductTotal = <T extends Partial<QuotationProduct>>(product: T) => {
   const quantity = parseFloat(product.Quantity as any) || 0;
-  const unitPrice = parseFloat(product.UnitPrice as any) || 0;
   const vendorCost = parseFloat(product.VendorCost as any) || 0;
   const printCost = parseFloat(product.PrintCost as any) || 0;
+  const profitMargin = (product as any).ProfitMargin !== undefined ? parseFloat((product as any).ProfitMargin) : 30; // Default 30%
+  const extraProfit = (product as any).ExtraProfit || false;
+  
+  // Calcular precio unitario basado en el switch de utilidad extra
+  let unitPrice: number;
+  if (extraProfit) {
+    // Escenario 1: Con utilidad extra
+    // ((COSTO * 1.3) + COSTO DE IMPRESION) * (1 + PORCENTAJE DE UTILIDAD / 100)
+    unitPrice = ((vendorCost * 1.03) + printCost) * (1 + profitMargin / 100);
+  } else {
+    // Escenario 2: Sin utilidad extra  
+    // (COSTO + COSTO DE IMPRESION) * (1 + PORCENTAJE DE UTILIDAD / 100)
+    unitPrice = (vendorCost + printCost) * (1 + profitMargin / 100);
+  }
+  
   const total = quantity * unitPrice;
   const totalCost = quantity * vendorCost + quantity * printCost;
   const revenue = total - totalCost;
   const commission = revenue * COMMISSION_RATE;
+  
   return {
     ...product,
     Quantity: quantity,
