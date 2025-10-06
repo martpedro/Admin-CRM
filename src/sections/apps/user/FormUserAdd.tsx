@@ -1,5 +1,20 @@
 import { useEffect, useState, ChangeEvent } from 'react';
 import usePermissions from 'hooks/usePermissions';
+
+// Agregar estilos CSS para animación
+const styles = `
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`;
+
+// Inyectar estilos
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement("style");
+  styleSheet.innerText = styles;
+  document.head.appendChild(styleSheet);
+}
 import { CompanyInfo } from 'types/company';
 import useSWR from 'swr';
 import companyApi from 'api/company';
@@ -18,6 +33,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
 import FormLabel from '@mui/material/FormLabel';
 import Grid from '@mui/material/Grid2';
+import InputAdornment from '@mui/material/InputAdornment';
 import InputLabel from '@mui/material/InputLabel';
 import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
@@ -46,7 +62,7 @@ import AvatarWithInitials from 'components/AvatarWithInitials';
 import IconButton from 'components/@extended/IconButton';
 import CircularWithPath from 'components/@extended/progress/CircularWithPath';
 
-import { insertUser, updateUser } from 'api/user';
+import { insertUser, updateUser, sendWelcomeEmail } from 'api/user';
 import { useGetMenuPermissions, setUserMenus, getUserMenus, type MenuPermissionItem } from 'api/menu-permissions';
 import { openSnackbar } from 'api/snackbar';
 import { Gender } from 'config';
@@ -54,7 +70,7 @@ import { ImagePath, getImageUrl } from 'utils/getImageUrl';
 import { generateInitialsAvatar, getInitials } from 'utils/avatar-generator';
 
 // assets
-import { Camera, CloseCircle, Trash } from 'iconsax-react';
+import { Camera, CloseCircle, Trash, Eye, EyeSlash, Refresh } from 'iconsax-react';
 
 // types
 import { SnackbarProps } from 'types/snackbar';
@@ -116,6 +132,7 @@ const getInitialValues = (user: any | null) => {
     middleName: '',
     name: '',
     email: '',
+    password: '',
     avatar: 1,
     gender: Gender.FEMALE,
     role: '',
@@ -148,6 +165,8 @@ const getInitialValues = (user: any | null) => {
   mapped.contact = user.Phone ?? user.contact ?? '';
   mapped.letterasigned = user.letterasigned ?? user.LetterAsign ?? '';
   mapped.isInactive = user.isInactive ?? (user.isActive === false ? true : false);
+  // Mapear correctamente el profile desde la respuesta del backend
+  mapped.profile = user.profile?.id ?? user.profile?.Id ?? user.profileId ?? 1;
   return mapped;
 };
 
@@ -167,6 +186,8 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
     getImageUrl(`avatar-${user && user !== null && user?.avatar ? user.avatar : 1}.png`, ImagePath.USERS)
   );
   const [generatedAvatar, setGeneratedAvatar] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [isGeneratingPassword, setIsGeneratingPassword] = useState<boolean>(false);
 
   // Estado para la empresa seleccionada
   const [empresa, setEmpresa] = useState<CompanyInfo | null>(null);
@@ -207,6 +228,9 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
     lastName: Yup.string().max(255).required('El apellido es obligatorio'),
     middleName: Yup.string().max(255, 'El apellido no debe exceder los 255 caracteres'),
     email: Yup.string().max(255).required('El correo electrónico es obligatorio').email('Debe ser un correo electrónico válido'),
+    password: user ? 
+      Yup.string().min(6, 'La contraseña debe tener al menos 6 caracteres') :
+      Yup.string().min(6, 'La contraseña debe tener al menos 6 caracteres').required('La contraseña es obligatoria'),
     status: Yup.string().required('El estado es obligatorio'),
     location: Yup.string().max(500, 'La ubicación no debe exceder los 500 caracteres'),
     about: Yup.string().max(500, 'La información no debe exceder los 500 caracteres')
@@ -227,6 +251,14 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
       try {
         let newUser: UserList = values;
         newUser.name = newUser.firstName + ' ' + newUser.lastName;
+
+        // Log para depuración
+        console.log('Valores del formulario antes del envío:', {
+          ...values,
+          profile: values.profile,
+          isInactive: values.isInactive,
+          password: values.password ? '[HIDDEN]' : 'NO PASSWORD'
+        });
 
         if (user) {
           const userId = (user as any)?.Id ?? newUser.id!;
@@ -255,14 +287,48 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
               await setUserMenus(newId, selectedMenus);
             }
 
-            openSnackbar({
-              open: true,
-              message: 'Usuario agregado exitosamente.',
-              variant: 'alert',
-              alert: {
-                color: 'success'
+            // Enviar correo de bienvenida si el usuario fue creado exitosamente
+            if (newId && values.password && values.email) {
+              try {
+                await sendWelcomeEmail({
+                  userId: String(newId),
+                  to: values.email,
+                  userName: `${values.firstName} ${values.lastName}`.trim(),
+                  temporaryPassword: values.password,
+                  accessUrl: window.location.origin,
+                  customMessage: empresa ? `Has sido asignado a la empresa: ${empresa.razonSocial}` : undefined
+                });
+                
+                openSnackbar({
+                  open: true,
+                  message: 'Usuario agregado exitosamente y correo de bienvenida enviado.',
+                  variant: 'alert',
+                  alert: {
+                    color: 'success'
+                  }
+                } as SnackbarProps);
+              } catch (emailError) {
+                console.error('Error enviando correo:', emailError);
+                openSnackbar({
+                  open: true,
+                  message: 'Usuario agregado exitosamente, pero no se pudo enviar el correo de bienvenida.',
+                  variant: 'alert',
+                  alert: {
+                    color: 'warning'
+                  }
+                } as SnackbarProps);
               }
-            } as SnackbarProps);
+            } else {
+              openSnackbar({
+                open: true,
+                message: 'Usuario agregado exitosamente.',
+                variant: 'alert',
+                alert: {
+                  color: 'success'
+                }
+              } as SnackbarProps);
+            }
+            
             setSubmitting(false);
             closeModal();
           });
@@ -272,6 +338,57 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
   });
 
   const { errors, touched, handleSubmit, isSubmitting, getFieldProps, setFieldValue } = formik;
+
+  // Función para generar contraseña segura
+  const generateSecurePassword = () => {
+    setIsGeneratingPassword(true);
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    
+    // Asegurar al menos una mayúscula, una minúscula, un número y un símbolo
+    password += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+    password += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+    password += '0123456789'[Math.floor(Math.random() * 10)];
+    password += '!@#$%^&*'[Math.floor(Math.random() * 8)];
+    
+    // Completar hasta 12 caracteres
+    for (let i = 4; i < 12; i++) {
+      password += charset[Math.floor(Math.random() * charset.length)];
+    }
+    
+    // Mezclar los caracteres
+    password = password.split('').sort(() => Math.random() - 0.5).join('');
+    
+    setFieldValue('password', password);
+    setTimeout(() => setIsGeneratingPassword(false), 500);
+  };
+
+  // Función para evaluar fortaleza de contraseña
+  const getPasswordStrength = (password: string): { label: string; color: string } => {
+    if (!password) return { label: '', color: '' };
+    
+    let score = 0;
+    
+    // Longitud
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+    
+    // Contiene minúsculas
+    if (/[a-z]/.test(password)) score += 1;
+    
+    // Contiene mayúsculas  
+    if (/[A-Z]/.test(password)) score += 1;
+    
+    // Contiene números
+    if (/[0-9]/.test(password)) score += 1;
+    
+    // Contiene símbolos
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    
+    if (score <= 2) return { label: 'Débil', color: 'error.main' };
+    if (score <= 4) return { label: 'Media', color: 'warning.main' };
+    return { label: 'Fuerte', color: 'success.main' };
+  };
 
   // Generar avatar con iniciales cuando cambian los nombres
   useEffect(() => {
@@ -449,6 +566,67 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                       </Stack>
                     </Grid>
 
+                    <Grid size={12}>
+                      <Stack sx={{ gap: 1 }}>
+                        <InputLabel htmlFor="user-password">
+                          {user ? 'Nueva Contraseña (opcional)' : 'Contraseña'}
+                        </InputLabel>
+                        <TextField
+                          fullWidth
+                          id="user-password"
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder={user ? 'Dejar vacío para mantener la actual' : 'Ingrese la contraseña'}
+                          {...getFieldProps('password')}
+                          error={Boolean(touched.password && errors.password)}
+                          helperText={touched.password && typeof errors.password === 'string' ? errors.password : undefined}
+                          InputProps={{
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <Stack direction="row" sx={{ gap: 1 }}>
+                                  <Tooltip title="Generar contraseña segura">
+                                    <IconButton
+                                      onClick={generateSecurePassword}
+                                      disabled={isGeneratingPassword}
+                                      size="small"
+                                      color="primary"
+                                    >
+                                      <Refresh 
+                                        style={{ 
+                                          fontSize: '1.2rem',
+                                          animation: isGeneratingPassword ? 'spin 1s linear infinite' : 'none'
+                                        }} 
+                                      />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                                    <IconButton
+                                      onClick={() => setShowPassword(!showPassword)}
+                                      size="small"
+                                    >
+                                      {showPassword ? <EyeSlash style={{ fontSize: '1.2rem' }} /> : <Eye style={{ fontSize: '1.2rem' }} />}
+                                    </IconButton>
+                                  </Tooltip>
+                                </Stack>
+                              </InputAdornment>
+                            )
+                          }}
+                        />
+                        {formik.values.password && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                color: getPasswordStrength(formik.values.password).color,
+                                fontWeight: 'medium'
+                              }}
+                            >
+                              Fortaleza: {getPasswordStrength(formik.values.password).label}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Stack>
+                    </Grid>
+
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-letterasigned">Letra de Cotización</InputLabel>
@@ -538,35 +716,6 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                             {String(errors.role)}
                           </FormHelperText>
                         )}
-                      </Stack>
-                    </Grid>
-                    <Grid size={12}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-skills">Subsidiarias</InputLabel>
-                        <Autocomplete
-                          multiple
-                          fullWidth
-                          id="user-skills"
-                          options={skills}
-                          {...getFieldProps('skills')}
-                          getOptionLabel={(label) => label}
-                          onChange={(event, newValue) => {
-                            setFieldValue('skills', newValue);
-                          }}
-                          renderInput={(params) => <TextField {...params} name="skill" placeholder="Agregar habilidades" />}
-                          renderTags={(value, getTagProps) =>
-                            value.map((option, index) => (
-                              <Chip
-                                {...getTagProps({ index })}
-                                variant="combined"
-                                key={index}
-                                label={option}
-                                deleteIcon={<CloseCircle style={{ fontSize: '0.75rem' }} />}
-                                sx={{ color: 'text.primary' }}
-                              />
-                            ))
-                          }
-                        />
                       </Stack>
                     </Grid>
                     <Grid size={12}>

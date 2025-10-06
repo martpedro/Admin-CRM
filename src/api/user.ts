@@ -127,6 +127,14 @@ export async function insertUser(newUser: UserList, avatarFile?: File) {
   const profile = (newUser as any).profile || 1;
   const password = (newUser as any).password || '123456';
 
+  // Log para depuración
+  console.log('Datos mapeados para insertUser:', {
+    firstName, lastName, middleName, email, phone, letterAsign, 
+    isActive, profile, password: password ? '[HIDDEN]' : 'NO PASSWORD',
+    isInactive: (newUser as any).isInactive,
+    originalProfile: (newUser as any).profile
+  });
+
   formData.append('Name', String(firstName).trim());
   formData.append('LastNAme', `${String(lastName).trim()} ${String(middleName).trim()}`.trim());
   formData.append('UserName', email);
@@ -164,6 +172,14 @@ export async function updateUser(UserId: number, updatedUser: UserList, avatarFi
   const isActive = !((updatedUser as any).isInactive === true);
   const profile = (updatedUser as any).profile || 1;
   const password = (updatedUser as any).password || (updatedUser as any)['password'] || '123456';
+
+  // Log para depuración
+  console.log('Datos mapeados para updateUser:', {
+    UserId, firstName, lastName, middleName, email, phone, letterAsign, 
+    isActive, profile, password: password ? '[HIDDEN]' : 'NO PASSWORD',
+    isInactive: (updatedUser as any).isInactive,
+    originalProfile: (updatedUser as any).profile
+  });
 
   formData.append('Id', String(UserId));
   formData.append('Name', String(firstName).trim());
@@ -338,6 +354,36 @@ export async function changeUserPassword(passwordData: {
     return {
       success: false,
       error: error.response?.data?.message || error.message || 'Error changing password'
+    };
+  }
+}
+
+// Function to send welcome email
+export async function sendWelcomeEmail(emailData: {
+  userId: string;
+  to: string;
+  userName: string;
+  temporaryPassword: string;
+  accessUrl?: string;
+  customMessage?: string;
+}) {
+  try {
+    const response = await axiosServices.post('/api/user/send-welcome-email', emailData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    
+    return {
+      success: true,
+      data: response.data?.Message || response.data
+    };
+  } catch (error: any) {
+    console.error('Error sending welcome email:', error);
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Error sending welcome email'
     };
   }
 }

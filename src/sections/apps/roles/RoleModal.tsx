@@ -18,116 +18,138 @@ import IconButton from 'components/@extended/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
-
+import Accordion from '@mui/material/Accordion';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import Paper from '@mui/material/Paper';
 import { RoleItem } from 'api/role';
-import { useGetPermissions } from 'api/permissions';
-import { permissionApi, SimplePermission } from 'api/permission';
-import PermissionModal from 'sections/apps/permissions/PermissionModal';
-import { PermissionAdvanced } from 'types/permission';
-import { Edit } from 'iconsax-react';
-import { useGetMenuPermissions } from 'api/menu-permissions';
+import { useAllAdvancedPermissions, AdvancedPermissionItem } from 'api/permissions-advanced';
+import { Edit, Shield, Menu, Data, User, ArrowDown2 } from 'iconsax-react';
 
 type SubmitPayload = { name: string; isActive: boolean; permissions: number[] };
+
+// Iconos por tipo de permiso
+const PermissionTypeIcon = ({ type }: { type: string }) => {
+  switch (type) {
+    case 'menu_access': return <Menu size={16} />;
+    case 'basic_crud': return <Data size={16} />;
+    case 'data_scope': return <User size={16} />;
+    case 'action_permission': return <Shield size={16} />;
+    default: return <Shield size={16} />;
+  }
+};
 
 export default function RoleModal({ open, onClose, initial, onSubmit }: { open: boolean; onClose: () => void; initial?: Partial<RoleItem>; onSubmit: (data: SubmitPayload) => void; }) {
   const { canCreate, canUpdate } = usePermissions();
   const [name, setName] = useState<string>(initial?.name || '');
   const [isActive, setIsActive] = useState<boolean>(initial?.isActive ?? true);
-  const [permissions, setPermissions] = useState<number[]>(initial?.permissions?.map((p: any) => p.id) || []);
+  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
 
-  const { permissions: advancedPerms = [], permissionsLoading } = useGetPermissions();
-  const [simplePerms, setSimplePerms] = useState<SimplePermission[]>([]);
-  const [permModalOpen, setPermModalOpen] = useState(false);
-  const [selectedPermission, setSelectedPermission] = useState<PermissionAdvanced | null>(null);
-  const { menus = [], menusLoading } = useGetMenuPermissions();
-  const [selectedMenus, setSelectedMenus] = useState<string[]>([]);
+  const { permissions: advancedPerms = [], permissionsLoading } = useAllAdvancedPermissions();
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedModule, setSelectedModule] = useState<string>('all');
 
   useEffect(() => {
     setName(initial?.name || '');
     setIsActive(initial?.isActive ?? true);
-    setPermissions(initial?.permissions?.map((p: any) => p.id) || []);
+    // Si initial tiene permisos, convertirlos a IDs
+    setSelectedPermissions(initial?.permissions?.map((p: any) => p.id || p.Id) || []);
   }, [initial]);
 
-  useEffect(() => {
-    if (!open) return;
-    permissionApi.getAll().then(setSimplePerms).catch(() => setSimplePerms([]));
-  }, [open]);
+  // Agrupar permisos por módulo
+  const permissionsByModule = useMemo(() => {
+    const groups: Record<string, AdvancedPermissionItem[]> = {};
+    advancedPerms.forEach(permission => {
+      const module = permission.module || 'Sistema';
+      if (!groups[module]) {
+        groups[module] = [];
+      }
+      groups[module].push(permission);
+    });
+    return groups;
+  }, [advancedPerms]);
 
-  // Prefill de menús seleccionados basado en permisos base actuales del rol
-  useEffect(() => {
-    if (!open) return;
-    if (!menus || menus.length === 0) return;
-    if (!simplePerms || simplePerms.length === 0) return;
-    // Solo preseleccionar si aún no hay selección manual
-    if (selectedMenus.length > 0) return;
-    const pre: string[] = [];
-    for (const m of menus as any[]) {
-      const id = baseIdForKey(`menu_${m.menuKey}`);
-      if (id && permissions.includes(id)) pre.push(m.menuKey);
+  // Filtrar permisos según búsqueda y módulo seleccionado
+  const filteredPermissions = useMemo(() => {
+    let filtered = advancedPerms;
+
+    // Filtrar por módulo
+    if (selectedModule !== 'all') {
+      filtered = filtered.filter(p => (p.module || 'Sistema') === selectedModule);
     }
-    if (pre.length) setSelectedMenus(Array.from(new Set(pre)));
-  }, [open, menus, simplePerms]);
 
-  const baseIdForKey = (key?: string) => {
-    if (!key) return undefined;
-    const found = simplePerms.find((sp) => (sp.key || '').toLowerCase() === key.toLowerCase());
-    return found?.id;
+    // Filtrar por término de búsqueda
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(p => 
+        p.name.toLowerCase().includes(term) ||
+        p.key.toLowerCase().includes(term) ||
+        (p.module || '').toLowerCase().includes(term)
+      );
+    }
+
+    return filtered;
+  }, [advancedPerms, selectedModule, searchTerm]);
+
+  // Obtener módulos únicos
+  const modules = useMemo(() => {
+    const moduleSet = new Set<string>();
+    advancedPerms.forEach(p => moduleSet.add(p.module || 'Sistema'));
+    return Array.from(moduleSet).sort();
+  }, [advancedPerms]);
+
+  // Funciones de toggle
+  const togglePermission = (permissionId: number) => {
+    setSelectedPermissions(prev => 
+      prev.includes(permissionId) 
+        ? prev.filter(id => id !== permissionId)
+        : [...prev, permissionId]
+    );
   };
 
-  const allBaseIdsFromAdvanced = useMemo(
-    () => (advancedPerms || [])
-      .map((p: any) => baseIdForKey(p.permissionKey))
-      .filter((id): id is number => typeof id === 'number'),
-    [advancedPerms, simplePerms]
-  );
-
-  const allSelected = useMemo(
-    () => allBaseIdsFromAdvanced.length > 0 && allBaseIdsFromAdvanced.every((id) => permissions.includes(id)),
-    [allBaseIdsFromAdvanced, permissions]
-  );
-  const canToggleAll = !permissionsLoading && allBaseIdsFromAdvanced.length > 0;
-  console.log(canToggleAll, permissionsLoading, allBaseIdsFromAdvanced.length);
-  const togglePermByKey = (key?: string) => {
-    const id = baseIdForKey(key);
-    if (!id) return;
-    setPermissions((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleModulePermissions = (module: string) => {
+    const modulePermissions = permissionsByModule[module] || [];
+    const moduleIds = modulePermissions.map(p => p.id);
+    const allModuleSelected = moduleIds.every(id => selectedPermissions.includes(id));
+    
+    if (allModuleSelected) {
+      // Deseleccionar todos los del módulo
+      setSelectedPermissions(prev => prev.filter(id => !moduleIds.includes(id)));
+    } else {
+      // Seleccionar todos los del módulo
+      setSelectedPermissions(prev => {
+        const newSelected = new Set(prev);
+        moduleIds.forEach(id => newSelected.add(id));
+        return Array.from(newSelected);
+      });
+    }
   };
 
-  // Base permissions helpers
-  const baseAllIds = useMemo(() => simplePerms.map((sp) => sp.id), [simplePerms]);
-  const baseAllSelected = useMemo(
-    () => baseAllIds.length > 0 && baseAllIds.every((id) => permissions.includes(id)),
-    [baseAllIds, permissions]
-  );
-  const toggleBaseById = (id: number) => {
-    setPermissions((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleAllPermissions = () => {
+    const allIds = filteredPermissions.map(p => p.id);
+    const allSelected = allIds.every(id => selectedPermissions.includes(id));
+    
+    if (allSelected) {
+      // Deseleccionar todos los filtrados
+      setSelectedPermissions(prev => prev.filter(id => !allIds.includes(id)));
+    } else {
+      // Seleccionar todos los filtrados
+      setSelectedPermissions(prev => {
+        const newSelected = new Set(prev);
+        allIds.forEach(id => newSelected.add(id));
+        return Array.from(newSelected);
+      });
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // 1) asegurar que existan permisos base para todos los avanzados (incluye menús)
-    try { await permissionApi.syncBaseWithAdvanced(); } catch {}
-
-    // 2) convertir selectedMenus -> ids de permisos base (clave: menu_{menuKey})
-    const menuBaseIds = selectedMenus
-      .map((k) => baseIdForKey(`menu_${k}`))
-      .filter((id): id is number => typeof id === 'number');
-
-    // 3) unificar con los permisos ya seleccionados, evitando duplicados
-    const next = new Set<number>(permissions);
-    menuBaseIds.forEach((id) => next.add(id));
-
-    onSubmit({ name, isActive, permissions: Array.from(next) });
+    onSubmit({ 
+      name, 
+      isActive, 
+      permissions: selectedPermissions 
+    });
   };
-
-  // Menús helpers
-  const menuAllKeys = useMemo(() => (menus as any[]).map((m: any) => m.menuKey), [menus]);
-  const menuAllSelected = useMemo(
-    () => menuAllKeys.length > 0 && menuAllKeys.every((k) => selectedMenus.includes(k)),
-    [menuAllKeys, selectedMenus]
-  );
-
-  // (removido) Vista previa de menús visibles
 
   return (
     <>
@@ -149,139 +171,168 @@ export default function RoleModal({ open, onClose, initial, onSubmit }: { open: 
             content={false}
           >
             <SimpleBar sx={{ width: 1, maxHeight: `calc(100vh - 156px)`, '& .simplebar-content': { display: 'flex', flexDirection: 'column' } }}>
-              <Box component="form" onSubmit={submit} sx={{ p: 3, display: 'grid', gap: 2 }}>
-                <TextField label="Nombre del Rol" value={name} onChange={(e) => setName(e.target.value)} required fullWidth />
-                <FormControlLabel control={<Checkbox checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />} label="Activo" />
-                <Divider />
-                {/* Menús (desde API) */}
-                <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="h6">Menús</Typography>
-                  <Button
-                    size="small"
-                    onClick={() =>
-                      setSelectedMenus((prev) => {
-                        if (menuAllSelected) {
-                          const toRemove = new Set(menuAllKeys);
-                          return prev.filter((k) => !toRemove.has(k));
-                        }
-                        const current = new Set(prev);
-                        menuAllKeys.forEach((k) => current.add(k));
-                        return Array.from(current);
-                      })
-                    }
-                    disabled={menuAllKeys.length === 0}
-                  >
-                    {menuAllSelected ? 'Deseleccionar todos' : 'Seleccionar todos'}
-                  </Button>
-                </Stack>
-                <FormControl fullWidth size="small">
-                  <InputLabel id="menus-label">Seleccionar menús</InputLabel>
-                  <Select
-                    labelId="menus-label"
-                    multiple
-                    value={selectedMenus}
-                    label="Seleccionar menús"
-                    onChange={(e) => setSelectedMenus(typeof e.target.value === 'string' ? e.target.value.split(',') : (e.target.value as string[]))}
-                    renderValue={(selected) => (selected as string[]).map((k) => menus.find((m: any) => m.menuKey === k)?.menuName || k).join(', ')}
-                  >
-                    {menus.map((m: any) => (
-                      <MenuItem key={m.id} value={m.menuKey}>{m.menuName} ({m.menuPath})</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <Divider />
-                {/* Permisos base */}
-                <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="h6">Permisos</Typography>
-                  <Button
-                    size="small"
-                    onClick={() =>
-                      setPermissions((prev) => {
-                        if (baseAllSelected) {
-                          const toRemove = new Set(baseAllIds);
-                          return prev.filter((id) => !toRemove.has(id));
-                        }
-                        const current = new Set(prev);
-                        baseAllIds.forEach((id) => current.add(id));
-                        return Array.from(current);
-                      })
-                    }
-                    disabled={baseAllIds.length === 0}
-                  >
-                    {baseAllSelected ? 'Deseleccionar todos' : 'Seleccionar todos'}
-                  </Button>
-                </Stack>
-                <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
-                  {simplePerms.map((p) => {
-                    const selected = permissions.includes(p.id);
-                    return (
-                      <Chip
-                        key={p.id}
-                        label={p.name}
-                        variant={selected ? 'filled' : 'outlined'}
-                        color={selected ? 'primary' : 'default'}
-                        onClick={() => toggleBaseById(p.id)}
+              <Box component="form" onSubmit={submit} sx={{ p: 3 }}>
+                {/* Información básica del rol */}
+                <Stack spacing={3}>
+                  <TextField 
+                    label="Nombre del Rol" 
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)} 
+                    required 
+                    fullWidth 
+                  />
+                  <FormControlLabel 
+                    control={<Checkbox checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />} 
+                    label="Rol Activo" 
+                  />
+                  
+                  <Divider />
+                  
+                  {/* Sección de permisos */}
+                  <Stack spacing={2}>
+                    <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Typography variant="h6">
+                        Permisos ({selectedPermissions.length} seleccionados)
+                      </Typography>
+                      <Button
                         size="small"
+                        onClick={toggleAllPermissions}
+                        disabled={permissionsLoading || filteredPermissions.length === 0}
+                      >
+                        {filteredPermissions.every(p => selectedPermissions.includes(p.id)) ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                      </Button>
+                    </Stack>
+                    
+                    {/* Filtros */}
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                      <TextField
+                        placeholder="Buscar permisos..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        size="small"
+                        sx={{ flex: 1 }}
                       />
-                    );
-                  })}
+                      <FormControl size="small" sx={{ minWidth: 200 }}>
+                        <InputLabel>Módulo</InputLabel>
+                        <Select
+                          value={selectedModule}
+                          label="Módulo"
+                          onChange={(e) => setSelectedModule(e.target.value)}
+                        >
+                          <MenuItem value="all">Todos los módulos</MenuItem>
+                          {modules.map(module => (
+                            <MenuItem key={module} value={module}>{module}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Stack>
+                    
+                    {/* Permisos agrupados por módulo */}
+                    <Stack spacing={2}>
+                      {permissionsLoading ? (
+                        <Typography>Cargando permisos...</Typography>
+                      ) : (
+                        Object.entries(permissionsByModule)
+                          .filter(([module]) => selectedModule === 'all' || module === selectedModule)
+                          .map(([module, modulePermissions]) => {
+                            const filteredModulePerms = modulePermissions.filter(p => 
+                              !searchTerm || 
+                              p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              p.key.toLowerCase().includes(searchTerm.toLowerCase())
+                            );
+                            
+                            if (filteredModulePerms.length === 0) return null;
+                            
+                            const moduleSelectedCount = filteredModulePerms.filter(p => selectedPermissions.includes(p.id)).length;
+                            
+                            return (
+                              <Accordion key={module} defaultExpanded={selectedModule !== 'all'}>
+                                <AccordionSummary expandIcon={<ArrowDown2 size={20} />}>
+                                  <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', width: '100%', pr: 2 }}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                      {module} ({moduleSelectedCount}/{filteredModulePerms.length})
+                                    </Typography>
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleModulePermissions(module);
+                                      }}
+                                    >
+                                      {moduleSelectedCount === filteredModulePerms.length ? 'Deseleccionar' : 'Seleccionar'} módulo
+                                    </Button>
+                                  </Stack>
+                                </AccordionSummary>
+                                <AccordionDetails>
+                                  <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
+                                    {filteredModulePerms.map((permission) => {
+                                      const isSelected = selectedPermissions.includes(permission.id);
+                                      return (
+                                        <Chip
+                                          key={permission.id}
+                                          icon={<PermissionTypeIcon type={permission.type} />}
+                                          label={permission.name}
+                                          variant={isSelected ? 'filled' : 'outlined'}
+                                          color={isSelected ? 'primary' : 'default'}
+                                          onClick={() => togglePermission(permission.id)}
+                                          size="small"
+                                          sx={{ mb: 0.5 }}
+                                        />
+                                      );
+                                    })}
+                                  </Stack>
+                                </AccordionDetails>
+                              </Accordion>
+                            );
+                          })
+                      )}
+                    </Stack>
+                    
+                    {/* Resumen de permisos seleccionados */}
+                    {selectedPermissions.length > 0 && (
+                      <Paper sx={{ p: 2, bgcolor: 'primary.50' }}>
+                        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                          Resumen de permisos seleccionados:
+                        </Typography>
+                        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                          {selectedPermissions.slice(0, 10).map(permId => {
+                            const permission = advancedPerms.find(p => p.id === permId);
+                            return permission ? (
+                              <Chip
+                                key={permId}
+                                label={permission.name}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                              />
+                            ) : null;
+                          })}
+                          {selectedPermissions.length > 10 && (
+                            <Chip 
+                              label={`+${selectedPermissions.length - 10} más`} 
+                              size="small" 
+                              variant="outlined" 
+                            />
+                          )}
+                        </Stack>
+                      </Paper>
+                    )}
+                  </Stack>
                 </Stack>
-                <Divider />
-                {/* Permisos avanzados */}
-                <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography variant="h6">Permisos avanzados</Typography>
-                  <Button
-                    size="small"
-                    onClick={() =>
-                      setPermissions((prev) => {
-                        if (allSelected) {
-                          // quitar solo los permisos avanzados mapeados
-                          const toRemove = new Set(allBaseIdsFromAdvanced);
-                          return prev.filter((id) => !toRemove.has(id));
-                        }
-                        // agregar faltantes de permisos avanzados mapeados
-                        const current = new Set(prev);
-                        allBaseIdsFromAdvanced.forEach((id) => current.add(id));
-                        return Array.from(current);
-                      })
-                    }
-                    disabled={!canToggleAll}
-                  >
-                    {allSelected ? 'Deseleccionar todos' : 'Seleccionar todos'}
-                  </Button>
-                </Stack>
-                <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 1 }}>
-                  {(advancedPerms as any[]).map((p: any) => {
-                    const baseId = baseIdForKey(p.permissionKey);
-                    const selected = baseId ? permissions.includes(baseId) : false;
-                    return (
-                      <Stack key={p.id} direction="row" alignItems="center" sx={{ gap: 0.5 }}>
-                        <Chip
-                          label={`${p.name}`}
-                          variant={selected ? 'filled' : 'outlined'}
-                          color={selected ? 'primary' : 'default'}
-                          onClick={() => togglePermByKey(p.permissionKey)}
-                          size="small"
-                        />
-                        <Tooltip title="Editar permiso">
-                          <IconButton size="small" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedPermission(p as PermissionAdvanced); setPermModalOpen(true); }}>
-                            <Edit size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    );
-                  })}
-                </Stack>
-                {/* (removido) Menús visibles derivados */}
-                <Box sx={{ position: 'sticky', bottom: 0, bgcolor: 'background.paper', pt: 2, mt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-                  <Stack direction="row" sx={{ gap: 1, justifyContent: 'flex-end' }}>
-                    <Button color="secondary" onClick={onClose}>Cancelar</Button>
+                
+                {/* Botones de acción */}
+                <Box sx={{ position: 'sticky', bottom: 0, bgcolor: 'background.paper', pt: 3, mt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <Stack direction="row" sx={{ gap: 2, justifyContent: 'flex-end' }}>
+                    <Button color="secondary" onClick={onClose}>
+                      Cancelar
+                    </Button>
                     <Button
                       type="submit"
                       variant="contained"
                       disabled={initial?.id ? !canUpdate('role') : !canCreate('role')}
                     >
-                      Guardar
+                      {initial?.id ? 'Actualizar Rol' : 'Crear Rol'}
                     </Button>
                   </Stack>
                 </Box>
@@ -290,7 +341,6 @@ export default function RoleModal({ open, onClose, initial, onSubmit }: { open: 
           </MainCard>
         </Modal>
       )}
-      <PermissionModal open={permModalOpen} modalToggler={() => setPermModalOpen(false)} permission={selectedPermission} />
     </>
   );
 }
