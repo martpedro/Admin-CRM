@@ -213,6 +213,135 @@ export function useGetUserMaster() {
   return memoizedValue;
 }
 
+// Function to update current user profile
+export async function updateCurrentUserProfile(userData: {
+  username?: string;
+  email?: string;
+  language?: string;
+  signing?: string;
+  secureSettings?: {
+    secureBrowsing?: boolean;
+    loginNotifications?: boolean;
+    loginApprovals?: boolean;
+  };
+}) {
+  try {
+    const response = await axiosServices.put('/api/account/update-profile', userData, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    
+    return {
+      success: true,
+      data: response.data?.Message || response.data
+    };
+  } catch (error: any) {
+    console.error('Error updating user profile:', error);
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Error updating profile'
+    };
+  }
+}
+
+// Function to update current user personal information
+export async function updateCurrentUserPersonal(userData: {
+  name?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  username?: string;
+}, avatarFile?: File) {
+  try {
+    const formData = new FormData();
+    
+    // Add user data to form
+    if (userData.name) formData.append('Name', userData.name);
+    if (userData.lastName) formData.append('LastNAme', userData.lastName);
+    if (userData.email) {
+      formData.append('Email', userData.email);
+      formData.append('UserName', userData.email); // Username is email
+    }
+    if (userData.phone) formData.append('Phone', userData.phone);
+    
+    // Add avatar if provided
+    if (avatarFile) {
+      formData.append('avatar', avatarFile);
+    }
+
+    const response = await axiosServices.put('/api/user/update-personal', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    return {
+      success: true,
+      data: response.data?.Message || response.data
+    };
+  } catch (error: any) {
+    console.error('Error updating personal information:', error);
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Error updating personal information'
+    };
+  }
+}
+
+// Function to get current user profile
+export async function getCurrentUserProfile() {
+  try {
+    const response = await axiosServices.get('/api/account/me', {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    
+    return {
+      success: true,
+      data: response.data?.Message || response.data
+    };
+  } catch (error: any) {
+    console.error('Error getting user profile:', error);
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Error getting profile'
+    };
+  }
+}
+
+// Function to change user password
+export async function changeUserPassword(passwordData: {
+  oldPassword: string;
+  newPassword: string;
+}) {
+  try {
+    const response = await axiosServices.put('/api/account/change-password', {
+      oldPassword: passwordData.oldPassword,
+      newPassword: passwordData.newPassword
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    
+    return {
+      success: true,
+      data: response.data?.Message || response.data
+    };
+  } catch (error: any) {
+    console.error('Error changing password:', error);
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Error changing password'
+    };
+  }
+}
+
 export function handlerUserDialog(modal: boolean) {
   // to update local state based on key
   mutate('/user/modal', (currentUsermaster: any) => ({ ...currentUsermaster, modal }), false);

@@ -12,11 +12,12 @@ import permissions from './Permissions';
 import quotations from './Quotations';
 import companies from './Companies';
 import dashboard from './Dashboard';
+import profiles from './Profiles';
 
 // ==============================|| MENU ITEMS ||============================== //
 
 const menuItems: { items: NavItemType[] } = {
-  items: [dashboard, Users, customer, companies, quotations, permissions]
+  items: [dashboard, Users, customer, companies, quotations, permissions, profiles]
 };
 
 export default menuItems;

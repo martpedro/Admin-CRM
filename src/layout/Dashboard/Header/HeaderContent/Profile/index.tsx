@@ -20,6 +20,7 @@ import Box from '@mui/material/Box';
 import ProfileTab from './ProfileTab';
 import SettingTab from './SettingTab';
 import Avatar from 'components/@extended/Avatar';
+import AvatarWithInitials from 'components/AvatarWithInitials';
 import IconButton from 'components/@extended/IconButton';
 import Transitions from 'components/@extended/Transitions';
 import MainCard from 'components/MainCard';
@@ -127,7 +128,12 @@ export default function ProfilePage() {
         aria-haspopup="true"
         onClick={handleToggle}
       >
-        <Avatar alt="profile user" src={avatar1} />
+        <AvatarWithInitials 
+          alt="profile user" 
+          src={user?.profileImage || avatar1}
+          name={user?.name || 'Usuario'}
+          size={32}
+        />
       </ButtonBase>
       <Popper
         placement="bottom-end"
@@ -156,17 +162,22 @@ export default function ProfilePage() {
                     <Grid container sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
                       <Grid>
                         <Stack direction="row" sx={{ gap: 1.25, alignItems: 'center' }}>
-                          <Avatar alt="profile user" src={avatar1} />
+                          <AvatarWithInitials 
+                            alt="profile user" 
+                            src={user?.profileImage || avatar1}
+                            name={user?.name || 'Usuario'}
+                            size={40}
+                          />
                           <Stack>
-                            <Typography variant="subtitle1">{user?.name}</Typography>
+                            <Typography variant="subtitle1">{user?.name || 'Usuario'}</Typography>
                             <Typography variant="body2" color="secondary">
-                              UI/UX Designer
+                              {user?.profile?.name || user?.role || 'Sin rol asignado'}
                             </Typography>
                           </Stack>
                         </Stack>
                       </Grid>
                       <Grid>
-                        <Tooltip title="Logout">
+                        <Tooltip title="Cerrar Sesión">
                           <IconButton size="large" color="error" sx={{ p: 1 }} onClick={handleLogout}>
                             <Logout variant="Bulk" />
                           </IconButton>
@@ -178,15 +189,12 @@ export default function ProfilePage() {
                   <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                     <Tabs variant="fullWidth" value={value} onChange={handleChange} aria-label="profile tabs">
                       <Tab sx={tabStyle} icon={<Profile size={18} style={{ marginBottom: 0 }} />} label="Profile" {...a11yProps(0)} />
-                      <Tab sx={tabStyle} icon={<Setting2 size={18} style={{ marginBottom: 0 }} />} label="Setting" {...a11yProps(1)} />
                     </Tabs>
                   </Box>
                   <TabPanel value={value} index={0} dir={theme.direction}>
                     <ProfileTab handleLogout={handleLogout} />
                   </TabPanel>
-                  <TabPanel value={value} index={1} dir={theme.direction}>
-                    <SettingTab />
-                  </TabPanel>
+               
                 </MainCard>
               </ClickAwayListener>
             </Paper>

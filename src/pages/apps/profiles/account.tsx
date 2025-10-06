@@ -1,6 +1,9 @@
 import { useEffect, useState, SyntheticEvent } from 'react';
 import { useLocation, Link, Outlet } from 'react-router-dom';
 
+// third-party
+import { FormattedMessage } from 'react-intl';
+
 // material-ui
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
@@ -13,7 +16,7 @@ import MainCard from 'components/MainCard';
 import { APP_DEFAULT_PATH, GRID_COMMON_SPACING } from 'config';
 
 // assets
-import { DocumentText, Lock, Profile, Profile2User, Setting3, TableDocument } from 'iconsax-react';
+import { DocumentText, Lock, Profile } from 'iconsax-react';
 
 // ==============================|| PROFILE - ACCOUNT ||============================== //
 
@@ -24,35 +27,20 @@ export default function AccountProfile() {
   let breadcrumbTitle = '';
   let breadcrumbHeading = '';
   switch (pathname) {
-    case '/apps/profiles/account/personal':
-      breadcrumbTitle = 'personal';
-      breadcrumbHeading = 'personal';
+    case '/profiles/account/personal':
+      breadcrumbTitle = 'personal-tab';
+      breadcrumbHeading = 'personal-tab';
       selectedTab = 1;
       break;
-    case '/apps/profiles/account/my-account':
-      breadcrumbTitle = 'my account';
-      breadcrumbHeading = 'my account';
+    case '/profiles/account/password':
+      breadcrumbTitle = 'change-password-tab';
+      breadcrumbHeading = 'change-password-tab';
       selectedTab = 2;
       break;
-    case '/apps/profiles/account/password':
-      breadcrumbTitle = 'change password';
-      breadcrumbHeading = 'change password';
-      selectedTab = 3;
-      break;
-    case '/apps/profiles/account/role':
-      breadcrumbTitle = 'role';
-      breadcrumbHeading = 'accountant';
-      selectedTab = 4;
-      break;
-    case '/apps/profiles/account/settings':
-      breadcrumbTitle = 'settings';
-      breadcrumbHeading = 'account settings';
-      selectedTab = 5;
-      break;
-    case '/apps/profiles/account/basic':
+    case '/profiles/account/basic':
     default:
-      breadcrumbTitle = 'basic';
-      breadcrumbHeading = 'basic account';
+      breadcrumbTitle = 'profile-tab';
+      breadcrumbHeading = 'profile-tab';
       selectedTab = 0;
   }
 
@@ -63,16 +51,16 @@ export default function AccountProfile() {
   };
 
   let breadcrumbLinks = [
-    { title: 'home', to: APP_DEFAULT_PATH },
-    { title: 'account-profile', to: '/apps/profiles/account/basic' },
+    { title: 'inicio', to: APP_DEFAULT_PATH },
+    { title: 'perfil-cuenta', to: '/profiles/account/basic' },
     { title: breadcrumbTitle }
   ];
   if (selectedTab === 0) {
-    breadcrumbLinks = [{ title: 'home', to: APP_DEFAULT_PATH }, { title: 'account-profile' }];
+    breadcrumbLinks = [{ title: 'inicio', to: APP_DEFAULT_PATH }, { title: 'perfil-cuenta' }];
   }
 
   useEffect(() => {
-    if (pathname === '/apps/profiles/account/basic') {
+    if (pathname === '/profiles/account/basic') {
       setValue(0);
     }
   }, [pathname]);
@@ -84,18 +72,9 @@ export default function AccountProfile() {
         <Stack sx={{ gap: GRID_COMMON_SPACING }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', width: '100%' }}>
             <Tabs value={value} onChange={handleChange} variant="scrollable" scrollButtons="auto" aria-label="account profile tab">
-              <Tab label="Profile" component={Link} to="/apps/profiles/account/basic" icon={<Profile />} iconPosition="start" />
-              <Tab label="Personal" component={Link} to="/apps/profiles/account/personal" icon={<DocumentText />} iconPosition="start" />
-              <Tab
-                label="My Account"
-                component={Link}
-                to="/apps/profiles/account/my-account"
-                icon={<TableDocument />}
-                iconPosition="start"
-              />
-              <Tab label="Change Password" component={Link} to="/apps/profiles/account/password" icon={<Lock />} iconPosition="start" />
-              <Tab label="Role" component={Link} to="/apps/profiles/account/role" icon={<Profile2User />} iconPosition="start" />
-              <Tab label="Settings" component={Link} to="/apps/profiles/account/settings" icon={<Setting3 />} iconPosition="start" />
+              <Tab label={<FormattedMessage id="profile-tab" />} component={Link} to="/profiles/account/basic" icon={<Profile />} iconPosition="start" />
+              <Tab label={<FormattedMessage id="personal-tab" />} component={Link} to="/profiles/account/personal" icon={<DocumentText />} iconPosition="start" />
+              <Tab label={<FormattedMessage id="change-password-tab" />} component={Link} to="/profiles/account/password" icon={<Lock />} iconPosition="start" />
             </Tabs>
           </Box>
           <Outlet />

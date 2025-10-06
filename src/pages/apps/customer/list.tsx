@@ -52,6 +52,8 @@ import EmptyReactTable from 'components/EmptyReactTable';
 import AlertCustomerDelete from 'sections/apps/customer/AlertCustomerDelete';
 import AddressModal from 'sections/apps/customer/AddressModal';
 import CustomerModal from 'sections/apps/customer/CustomerModal';
+import AdvisorFilter from 'components/AdvisorFilter';
+import { useCustomerDataScope } from 'hooks/useDataScope';
 
 import { useGetCustomer } from 'api/customer';
 import { ImagePath, getImageUrl } from 'utils/getImageUrl';
@@ -67,11 +69,14 @@ interface Props {
   columns: ColumnDef<CustomerList>[];
   data: CustomerList[];
   modalToggler: () => void;
+  selectedAdvisor: string | number | 'all';
+  onAdvisorChange: (advisor: string | number | 'all') => void;
+  showAdvisorFilter: boolean;
 }
 
 // ==============================|| REACT TABLE - LIST ||============================== //
 
-function ReactTable({ data, columns, modalToggler }: Props) {
+function ReactTable({ data, columns, modalToggler, selectedAdvisor, onAdvisorChange, showAdvisorFilter }: Props) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'FirstName', desc: false }]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
@@ -150,11 +155,20 @@ function ReactTable({ data, columns, modalToggler }: Props) {
         [theme.breakpoints.down('sm')]: { '& .MuiOutlinedInput-root, & .MuiFormControl-root': { width: '100%' } }
       })}
       >
-      <DebouncedInput
-        value={globalFilter ?? ''}
-        onFilterChange={(value) => setGlobalFilter(String(value))}
-        placeholder={`Buscar en ${data.length} registros...`}
-      />
+      <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2, flex: 1 }}>
+        <DebouncedInput
+          value={globalFilter ?? ''}
+          onFilterChange={(value) => setGlobalFilter(String(value))}
+          placeholder={`Buscar en ${data.length} registros...`}
+          sx={{ flex: 1, minWidth: 200 }}
+        />
+        
+        <AdvisorFilter
+          module="customer"
+          selectedAdvisor={selectedAdvisor}
+          onAdvisorChange={onAdvisorChange}
+        />
+      </Stack>
 
       <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2, alignItems: 'center' }}>
         <SelectColumnSorting sortBy={sortBy.id} {...{ getState: table.getState, getAllColumns: table.getAllColumns, setSorting }} />
@@ -242,8 +256,10 @@ function ReactTable({ data, columns, modalToggler }: Props) {
 
 export default function CustomerListPage() {
   const { usersLoading: loading, customers: lists } = useGetCustomer();
+  const { showAdvisorFilter, canViewAll, dataScope } = useCustomerDataScope();
 
   const [open, setOpen] = useState<boolean>(false);
+  const [selectedAdvisor, setSelectedAdvisor] = useState<string | number | 'all'>('all');
 
   const [customerModal, setCustomerModal] = useState<boolean>(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerList | null>(null);
@@ -494,18 +510,40 @@ export default function CustomerListPage() {
     []
   );
 
+  // Filtrar datos por asesor según permisos
+  const filteredData = useMemo(() => {
+    if (!showAdvisorFilter) {
+      // Sin filtro de asesor: mostrar solo datos propios (implementar lógica según el backend)
+      return lists;
+    }
+
+    if (selectedAdvisor === 'all') {
+      // Mostrar todos según el permiso del usuario
+      return lists;
+    }
+
+    // Filtrar por asesor específico
+    return lists.filter(customer => {
+      const advisorId = customer.SupportSales?.Id;
+      return advisorId === selectedAdvisor;
+    });
+  }, [lists, selectedAdvisor, showAdvisorFilter]);
+
   if (loading) return <EmptyReactTable />;
 
   return (
     <>
       <ReactTable
         {...{
-          data: lists,
+          data: filteredData,
           columns,
           modalToggler: () => {
             setCustomerModal(true);
             setSelectedCustomer(null);
-          }
+          },
+          selectedAdvisor,
+          onAdvisorChange: setSelectedAdvisor,
+          showAdvisorFilter
         }}
       />
       <AlertCustomerDelete id={Number(customerDeleteId)} title={customerDeleteId} open={open} handleClose={handleClose} />

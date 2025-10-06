@@ -21,25 +21,25 @@ const icons = {
 
 const applications: NavItemType = {
   id: 'group-applications',
-  title: 'applications',
+  title: 'aplicaciones',
   icon: icons.applications,
   type: 'group',
   children: [
     {
       id: 'customer',
-      title: 'customer',
+      title: 'cliente',
       type: 'collapse',
       icon: icons.customer,
       children: [
         {
           id: 'customer-list',
-          title: 'list',
+          title: 'lista',
           type: 'item',
           url: '/apps/customer/customer-list',
           actions: [
             {
               type: NavActionType.FUNCTION,
-              label: 'Add Customer',
+              label: 'Agregar Cliente',
               function: () => handlerCustomerDialog(true),
               icon: icons.add
             }
@@ -47,7 +47,7 @@ const applications: NavItemType = {
         },
         {
           id: 'customer-card',
-          title: 'cards',
+          title: 'tarjetas',
           type: 'item',
           url: '/apps/customer/customer-card'
         }
@@ -61,24 +61,24 @@ const applications: NavItemType = {
     },
     {
       id: 'profile',
-      title: 'profile',
+      title: 'perfil',
       type: 'collapse',
       icon: icons.profile,
       children: [
         {
           id: 'user-profile',
-          title: 'user-profile',
+          title: 'perfil-usuario',
           type: 'item',
-          link: '/apps/profiles/user/:tab',
-          url: '/apps/profiles/user/personal',
+          link: '/profiles/user/:tab',
+          url: '/profiles/user/personal',
           breadcrumbs: false
         },
         {
           id: 'account-profile',
-          title: 'account-profile',
+          title: 'perfil-cuenta',
           type: 'item',
-          url: '/apps/profiles/account/basic',
-          link: '/apps/profiles/account/:tab',
+          url: '/profiles/account/basic',
+          link: '/profiles/account/:tab',
           breadcrumbs: false
         }
       ]

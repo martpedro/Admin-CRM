@@ -11,9 +11,15 @@ type UserProfile = {
   email?: string;
   avatar?: string;
   image?: string;
+  profileImage?: string;
   name?: string;
   role?: string;
   tier?: string;
+  profile?: {
+    id?: number;
+    name?: string;
+    description?: string;
+  };
 };
 
 export interface AuthProps {

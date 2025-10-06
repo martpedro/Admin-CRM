@@ -1,5 +1,8 @@
 import { useState, SyntheticEvent } from 'react';
 
+// third-party
+import { FormattedMessage, useIntl } from 'react-intl';
+
 // material-ui
 import Button from '@mui/material/Button';
 import FormHelperText from '@mui/material/FormHelperText';
@@ -17,6 +20,7 @@ import Box from '@mui/material/Box';
 
 // project-imports
 import { openSnackbar } from 'api/snackbar';
+import { changeUserPassword } from 'api/user';
 import IconButton from 'components/@extended/IconButton';
 import MainCard from 'components/MainCard';
 import { isNumber, isLowercaseChar, isUppercaseChar, isSpecialChar, minLength } from 'utils/password-validation';
@@ -34,6 +38,7 @@ import { Eye, EyeSlash, Minus, TickCircle } from 'iconsax-react';
 // ==============================|| USER PROFILE - PASSWORD CHANGE ||============================== //
 
 export default function TabPassword() {
+  const intl = useIntl();
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -53,7 +58,7 @@ export default function TabPassword() {
   };
 
   return (
-    <MainCard title="Change Password">
+    <MainCard title={<FormattedMessage id="change-password" />}>
       <Formik
         initialValues={{
           old: '',
@@ -62,30 +67,47 @@ export default function TabPassword() {
           submit: null
         }}
         validationSchema={Yup.object().shape({
-          old: Yup.string().required('Old Password is required'),
+          old: Yup.string().required(intl.formatMessage({ id: 'old-password-required' })),
           password: Yup.string()
-            .required('New Password is required')
+            .required(intl.formatMessage({ id: 'new-password-required' }))
             .matches(
               /^.*(?=.{8,})((?=.*[!@#$%^&*()\-_=+{};:,<.>]){1})(?=.*\d)((?=.*[a-z]){1})((?=.*[A-Z]){1}).*$/,
-              'Password must contain at least 8 characters, one uppercase, one number and one special case character'
+              intl.formatMessage({ id: 'password-requirements' })
             ),
           confirm: Yup.string()
-            .required('Confirm Password is required')
-            .test('confirm', `Passwords don't match.`, (confirm: string, yup: any) => yup.parent.password === confirm)
+            .required(intl.formatMessage({ id: 'confirm-password-required' }))
+            .test('confirm', intl.formatMessage({ id: 'passwords-dont-match' }), (confirm: string, yup: any) => yup.parent.password === confirm)
         })}
         onSubmit={async (values, { resetForm, setErrors, setStatus, setSubmitting }) => {
           try {
-            openSnackbar({
-              open: true,
-              message: 'Password changed successfully.',
-              variant: 'alert',
-              alert: { color: 'success' }
-            } as SnackbarProps);
+            const result = await changeUserPassword({
+              oldPassword: values.old,
+              newPassword: values.password
+            });
 
-            resetForm();
-            setStatus({ success: false });
+            if (result.success) {
+              openSnackbar({
+                open: true,
+                message: intl.formatMessage({ id: 'password-changed-success' }),
+                variant: 'alert',
+                alert: { color: 'success' }
+              } as SnackbarProps);
+
+              resetForm();
+              setStatus({ success: true });
+            } else {
+              throw new Error(result.error || intl.formatMessage({ id: 'error-changing-password' }));
+            }
+            
             setSubmitting(false);
           } catch (err: any) {
+            console.error('Error changing password:', err);
+            openSnackbar({
+              open: true,
+              message: err.message || intl.formatMessage({ id: 'error-changing-password' }),
+              variant: 'alert',
+              alert: { color: 'error' }
+            } as SnackbarProps);
             setStatus({ success: false });
             setErrors({ submit: err.message });
             setSubmitting(false);
@@ -98,9 +120,9 @@ export default function TabPassword() {
               <Grid container spacing={3} size={{ xs: 12, sm: 6 }}>
                 <Grid size={12}>
                   <Stack sx={{ gap: 1 }}>
-                    <InputLabel htmlFor="password-old">Old Password</InputLabel>
+                    <InputLabel htmlFor="password-old"><FormattedMessage id="old-password" /></InputLabel>
                     <OutlinedInput
-                      placeholder="Enter Old Password"
+                      placeholder={intl.formatMessage({ id: 'enter-old-password' })}
                       id="password-old"
                       type={showOldPassword ? 'text' : 'password'}
                       value={values.old}
@@ -132,9 +154,9 @@ export default function TabPassword() {
                 </Grid>
                 <Grid size={12}>
                   <Stack sx={{ gap: 1 }}>
-                    <InputLabel htmlFor="password-password">New Password</InputLabel>
+                    <InputLabel htmlFor="password-password"><FormattedMessage id="new-password" /></InputLabel>
                     <OutlinedInput
-                      placeholder="Enter New Password"
+                      placeholder={intl.formatMessage({ id: 'enter-new-password' })}
                       id="password-password"
                       type={showNewPassword ? 'text' : 'password'}
                       value={values.password}
@@ -166,9 +188,9 @@ export default function TabPassword() {
                 </Grid>
                 <Grid size={12}>
                   <Stack sx={{ gap: 1 }}>
-                    <InputLabel htmlFor="password-confirm">Confirm Password</InputLabel>
+                    <InputLabel htmlFor="password-confirm"><FormattedMessage id="confirm-password" /></InputLabel>
                     <OutlinedInput
-                      placeholder="Enter Confirm Password"
+                      placeholder={intl.formatMessage({ id: 'enter-confirm-password' })}
                       id="password-confirm"
                       type={showConfirmPassword ? 'text' : 'password'}
                       value={values.confirm}
@@ -201,37 +223,37 @@ export default function TabPassword() {
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Box sx={{ p: { xs: 0, sm: 2, md: 4, lg: 5 } }}>
-                  <Typography variant="h5">New password must contain:</Typography>
+                  <Typography variant="h5"><FormattedMessage id="new-password-must-contain" /></Typography>
                   <List sx={{ p: 0, mt: 1 }}>
                     <ListItem divider>
                       <ListItemIcon sx={{ color: minLength(values.password, 8) ? 'success.main' : 'inherit' }}>
                         {minLength(values.password, 8) ? <TickCircle /> : <Minus />}
                       </ListItemIcon>
-                      <ListItemText primary="At least 8 characters" />
+                      <ListItemText primary={<FormattedMessage id="at-least-8-characters" />} />
                     </ListItem>
                     <ListItem divider>
                       <ListItemIcon sx={{ color: isLowercaseChar(values.password) ? 'success.main' : 'inherit' }}>
                         {isLowercaseChar(values.password) ? <TickCircle /> : <Minus />}
                       </ListItemIcon>
-                      <ListItemText primary="At least 1 lower letter (a-z)" />
+                      <ListItemText primary={<FormattedMessage id="at-least-1-lowercase" />} />
                     </ListItem>
                     <ListItem divider>
                       <ListItemIcon sx={{ color: isUppercaseChar(values.password) ? 'success.main' : 'inherit' }}>
                         {isUppercaseChar(values.password) ? <TickCircle /> : <Minus />}
                       </ListItemIcon>
-                      <ListItemText primary="At least 1 uppercase letter (A-Z)" />
+                      <ListItemText primary={<FormattedMessage id="at-least-1-uppercase" />} />
                     </ListItem>
                     <ListItem divider>
                       <ListItemIcon sx={{ color: isNumber(values.password) ? 'success.main' : 'inherit' }}>
                         {isNumber(values.password) ? <TickCircle /> : <Minus />}
                       </ListItemIcon>
-                      <ListItemText primary="At least 1 number (0-9)" />
+                      <ListItemText primary={<FormattedMessage id="at-least-1-number" />} />
                     </ListItem>
                     <ListItem>
                       <ListItemIcon sx={{ color: isSpecialChar(values.password) ? 'success.main' : 'inherit' }}>
                         {isSpecialChar(values.password) ? <TickCircle /> : <Minus />}
                       </ListItemIcon>
-                      <ListItemText primary="At least 1 special characters" />
+                      <ListItemText primary={<FormattedMessage id="at-least-1-special" />} />
                     </ListItem>
                   </List>
                 </Box>
@@ -239,10 +261,10 @@ export default function TabPassword() {
               <Grid size={12}>
                 <Stack direction="row" sx={{ gap: 2, justifyContent: 'flex-end', alignItems: 'center' }}>
                   <Button variant="outlined" color="secondary">
-                    Cancel
+                    <FormattedMessage id="cancel" />
                   </Button>
                   <Button disabled={isSubmitting || Object.keys(errors).length !== 0} type="submit" variant="contained">
-                    Save
+                    <FormattedMessage id="save" />
                   </Button>
                 </Stack>
               </Grid>

@@ -4,7 +4,7 @@ import { lazy } from 'react';
 import Loadable from 'components/Loadable';
 import { SimpleLayoutType } from 'config';
 import DashboardLayout from 'layout/Dashboard';
-import PagesLayout from 'layout/Pages';
+// import PagesLayout from 'layout/Dashboard/Pages'; // Removed because the module does not exist or is incorrectly referenced.
 import SimpleLayout from 'layout/Simple';
 
 
@@ -28,6 +28,17 @@ const AppQuotationsList = Loadable(lazy(() => import('pages/apps/quotations/list
 const AppQuotationsCreate = Loadable(lazy(() => import('pages/apps/quotations/create')));
 const AppQuotationsEdit = Loadable(lazy(() => import('pages/apps/quotations/edit')));
 const AppCompanyList = Loadable(lazy(() => import('pages/apps/company/list')));
+
+// Profile pages
+const UserProfile = Loadable(lazy(() => import('pages/apps/profiles/user')));
+const UserTabPersonal = Loadable(lazy(() => import('sections/apps/profiles/user/TabPersonal')));
+const UserTabPassword = Loadable(lazy(() => import('sections/apps/profiles/user/TabPassword')));
+
+const AccountProfile = Loadable(lazy(() => import('pages/apps/profiles/account')));
+const AccountTabProfile = Loadable(lazy(() => import('sections/apps/profiles/account/TabProfile')));
+const AccountTabPersonal = Loadable(lazy(() => import('sections/apps/profiles/account/TabPersonal')));
+const AccountTabPassword = Loadable(lazy(() => import('sections/apps/profiles/account/TabPassword')));
+
 const DashboardHome = Loadable(lazy(() => import('pages/dashboard')));
 
 // console.log('AppInvoiceCreate', AppInvoiceList, AppInvoiceDetails, AppInvoiceEdit);
@@ -101,6 +112,43 @@ const MainRoutes = {
                 { path: 'create', element: <AppQuotationsCreate /> },
                 { path: 'edit/:id', element: <AppQuotationsEdit /> }
               ]
+            },
+            {
+              path: 'profiles',
+              children: [
+                {
+                  path: 'account',
+                  element: <AccountProfile />,
+                  children: [
+                    {
+                      path: 'basic',
+                      element: <AccountTabProfile />
+                    },
+                    {
+                      path: 'personal',
+                      element: <AccountTabPersonal />
+                    },
+                    {
+                      path: 'password',
+                      element: <AccountTabPassword />
+                    }
+                  ]
+                },
+                {
+                  path: 'user',
+                  element: <UserProfile />,
+                  children: [
+                    {
+                      path: 'personal',
+                      element: <UserTabPersonal />
+                    },
+                    {
+                      path: 'password',
+                      element: <UserTabPassword />
+                    }
+                  ]
+                }
+              ]
             }
       ]
     },
@@ -121,7 +169,7 @@ const MainRoutes = {
 
     {
       path: '/maintenance',
-      element: <PagesLayout />,
+      // element: <PagesLayout />, // Removed because PagesLayout does not exist.
       children: [
         {
           path: '404',

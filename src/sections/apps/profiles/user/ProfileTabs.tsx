@@ -1,6 +1,9 @@
 import { useEffect, useState, ChangeEvent, MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 
+// hooks
+import useAuth from 'hooks/useAuth';
+
 // material-ui
 import Divider from '@mui/material/Divider';
 import FormLabel from '@mui/material/FormLabel';
@@ -15,10 +18,12 @@ import Box from '@mui/material/Box';
 // project-imports
 import ProfileTab from './ProfileTab';
 import Avatar from 'components/@extended/Avatar';
+import AvatarWithInitials from 'components/AvatarWithInitials';
 import MoreIcon from 'components/@extended/MoreIcon';
 import IconButton from 'components/@extended/IconButton';
 import MainCard from 'components/MainCard';
 import { facebookColor, linkedInColor } from 'config';
+import { generateInitialsAvatar, getInitials } from 'utils/avatar-generator';
 
 // assets
 import { Apple, Camera, Facebook, Google } from 'iconsax-react';
@@ -31,14 +36,37 @@ interface Props {
 // ==============================|| USER PROFILE - TABS ||============================== //
 
 export default function ProfileTabs({ focusInput }: Props) {
+  const { user } = useAuth();
   const [selectedImage, setSelectedImage] = useState<File | undefined>(undefined);
-  const [avatar, setAvatar] = useState<string | undefined>(defaultImages);
+  const [avatar, setAvatar] = useState<string | undefined>(user?.avatar || defaultImages);
+  const [generatedAvatar, setGeneratedAvatar] = useState<string>('');
 
   useEffect(() => {
     if (selectedImage) {
       setAvatar(URL.createObjectURL(selectedImage));
     }
   }, [selectedImage]);
+
+  // Generar avatar con iniciales si no hay imagen de perfil
+  useEffect(() => {
+    const generateDefaultAvatar = async () => {
+      if (!user?.avatar && user?.name) {
+        const nameParts = user.name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
+        try {
+          const avatarDataURL = await generateInitialsAvatar(firstName, lastName, 124);
+          setGeneratedAvatar(avatarDataURL);
+          setAvatar(avatarDataURL);
+        } catch (error) {
+          console.error('Error generando avatar:', error);
+        }
+      }
+    };
+    
+    generateDefaultAvatar();
+  }, [user?.name, user?.avatar]);
 
   const [anchorEl, setAnchorEl] = useState<Element | (() => Element) | null | undefined>(null);
   const open = Boolean(anchorEl);
@@ -55,45 +83,7 @@ export default function ProfileTabs({ focusInput }: Props) {
     <MainCard>
       <Grid container spacing={6}>
         <Grid size={12}>
-          <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
-            <IconButton
-              variant="light"
-              color="secondary"
-              id="basic-button"
-              aria-controls={open ? 'basic-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={open ? 'true' : undefined}
-              onClick={handleClick}
-              sx={{ transform: 'rotate(90deg)' }}
-            >
-              <MoreIcon />
-            </IconButton>
-            <Menu
-              id="basic-menu"
-              anchorEl={anchorEl}
-              open={open}
-              onClose={handleClose}
-              MenuListProps={{ 'aria-labelledby': 'basic-button' }}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            >
-              <MenuItem
-                component={Link}
-                to="/apps/profiles/user/personal"
-                onClick={() => {
-                  handleClose();
-                  setTimeout(() => {
-                    focusInput();
-                  });
-                }}
-              >
-                Edit
-              </MenuItem>
-              <MenuItem onClick={handleClose} disabled>
-                Delete
-              </MenuItem>
-            </Menu>
-          </Stack>
+         
           <Stack sx={{ gap: 2.5, alignItems: 'center' }}>
             <FormLabel
               htmlFor="change-avatar"
@@ -105,7 +95,14 @@ export default function ProfileTabs({ focusInput }: Props) {
                 cursor: 'pointer'
               }}
             >
-              <Avatar alt="Avatar 1" src={avatar} sx={{ width: 124, height: 124, border: '1px dashed' }} />
+              <AvatarWithInitials 
+                name={user?.name?.split(' ')[0] || ''}
+                lastName={user?.name?.split(' ').slice(1).join(' ') || ''}
+                src={avatar}
+                size={124}
+                sx={{ border: '1px dashed #ccc' }}
+                fallbackToInitials={true}
+              />
               <Box
                 sx={(theme) => ({
                   position: 'absolute',
@@ -136,35 +133,13 @@ export default function ProfileTabs({ focusInput }: Props) {
               onChange={(e: ChangeEvent<HTMLInputElement>) => setSelectedImage(e.target.files?.[0])}
             />
             <Stack sx={{ gap: 0.5, alignItems: 'center' }}>
-              <Typography variant="h5">Stebin Ben</Typography>
-              <Typography color="secondary">Full Stack Developer</Typography>
+              <Typography variant="h5">{user?.name || 'Usuario'}</Typography>
+              <Typography color="secondary">{user?.role || 'Sin rol asignado'}</Typography>
             </Stack>
-            <Stack direction="row" sx={{ gap: 3, '& svg': { fontSize: '1.15rem', cursor: 'pointer' }, color: 'error.main' }}>
-              <Google variant="Bold" />
-              <Facebook variant="Bold" color={facebookColor} />
-              <Apple variant="Bold" color={linkedInColor} />
-            </Stack>
+           
           </Stack>
         </Grid>
-        <Grid sx={{ display: { sm: 'block', md: 'none' } }} size={{ sm: 3 }} />
-        <Grid size={{ xs: 12, sm: 6, md: 12 }}>
-          <Stack direction="row" sx={{ justifyContent: 'space-around', alignItems: 'center' }}>
-            <Stack sx={{ gap: 0.5, alignItems: 'center' }}>
-              <Typography variant="h5">86</Typography>
-              <Typography color="secondary">Post</Typography>
-            </Stack>
-            <Divider orientation="vertical" flexItem />
-            <Stack sx={{ gap: 0.5, alignItems: 'center' }}>
-              <Typography variant="h5">40</Typography>
-              <Typography color="secondary">Project</Typography>
-            </Stack>
-            <Divider orientation="vertical" flexItem />
-            <Stack sx={{ gap: 0.5, alignItems: 'center' }}>
-              <Typography variant="h5">4.5K</Typography>
-              <Typography color="secondary">Members</Typography>
-            </Stack>
-          </Stack>
-        </Grid>
+        
         <Grid size={12}>
           <ProfileTab />
         </Grid>

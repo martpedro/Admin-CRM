@@ -61,7 +61,7 @@ export default function ProfileCard({ focusInput }: Props) {
           </Stack>
         </Grid>
         <Grid sx={{ mx: { xs: 2, sm: 3 }, my: { xs: 1, sm: 0 }, mb: { xs: 2, sm: 0 } }} size={downSM ? 12 : 'auto'}>
-          <Button variant="contained" fullWidth={downSM} component={Link} to="/apps/profiles/user/personal" onClick={focusInput}>
+          <Button variant="contained" fullWidth={downSM} component={Link} to="/profiles/user/personal" onClick={focusInput}>
             Edit Your Profile
           </Button>
         </Grid>

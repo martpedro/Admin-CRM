@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
 import { SearchNormal1, DocumentUpload } from 'iconsax-react';
-import { useSnackbar } from 'notistack';
+import { openSnackbar } from 'api/snackbar';
 import quotationsApi from 'api/quotations';
 import { QuotationProduct } from 'api/quotations';
 import { calculateProductTotal, formatCurrencyMXN } from 'utils/quotation';
@@ -54,7 +54,6 @@ const initialProduct: ProductWithOrigin = {
 
 export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps) => {
   const [imagePreview, setImagePreview] = useState<string>('');
-  const { enqueueSnackbar } = useSnackbar();
   const [productSearchMode, setProductSearchMode] = useState(0); // 0: search, 1: manual
   const [searchOptions, setSearchOptions] = useState<any[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -95,13 +94,39 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
 
   const handleAdd = async () => {
     if (productSearchMode === 0 && !manualProduct.Code) {
-      enqueueSnackbar('Debe seleccionar un producto', { variant: 'warning' });
+      openSnackbar({
+        open: true,
+        message: 'Debe seleccionar un producto',
+        variant: 'alert',
+        alert: { color: 'warning', variant: 'filled' },
+        anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+        transition: 'Fade',
+        close: false,
+        action: false,
+        actionButton: false,
+        dense: false,
+        maxStack: 3,
+        iconVariant: 'usedefault'
+      });
       return;
     }
     let imageUrl = manualProduct.Image;
     if (productSearchMode === 1) {
       if (!manualProduct.Code || !manualProduct.Description || manualProduct.UnitPrice <= 0) {
-        enqueueSnackbar('Complete Código, Descripción y Precio Unitario', { variant: 'warning' });
+        openSnackbar({
+          open: true,
+          message: 'Complete Código, Descripción y Precio Unitario',
+          variant: 'alert',
+          alert: { color: 'warning', variant: 'filled' },
+          anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+          transition: 'Fade',
+          close: false,
+          action: false,
+          actionButton: false,
+          dense: false,
+          maxStack: 3,
+          iconVariant: 'usedefault'
+        });
         return;
       }
       // Subir imagen a upload-image.php si existe
@@ -111,14 +136,40 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
           manualProduct.Image = imageUrl;
           manualProduct.ImageFile = undefined;
         } catch (err) {
-          enqueueSnackbar('Error subiendo imagen', { variant: 'error' });
+          openSnackbar({
+            open: true,
+            message: 'Error subiendo imagen',
+            variant: 'alert',
+            alert: { color: 'error', variant: 'filled' },
+            anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+            transition: 'Fade',
+            close: false,
+            action: false,
+            actionButton: false,
+            dense: false,
+            maxStack: 3,
+            iconVariant: 'usedefault'
+          });
           return;
         }
       }
     }
     const productToAdd = calculateProductTotal({ ...manualProduct, Image: imageUrl });
     onAdd(productToAdd);
-    enqueueSnackbar('Producto agregado', { variant: 'success' });
+    openSnackbar({
+      open: true,
+      message: 'Producto agregado',
+      variant: 'alert',
+      alert: { color: 'success', variant: 'filled' },
+      anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+      transition: 'Fade',
+      close: false,
+      action: false,
+      actionButton: false,
+      dense: false,
+      maxStack: 3,
+      iconVariant: 'usedefault'
+    });
     onClose();
     setImagePreview('');
   };
@@ -128,7 +179,20 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
     if (file) {
       // Validar tamaño del archivo (máximo 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        enqueueSnackbar('La imagen es muy grande. Máximo 5MB.', { variant: 'warning' });
+        openSnackbar({
+          open: true,
+          message: 'La imagen es muy grande. Máximo 5MB.',
+          variant: 'alert',
+          alert: { color: 'warning', variant: 'filled' },
+          anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+          transition: 'Fade',
+          close: false,
+          action: false,
+          actionButton: false,
+          dense: false,
+          maxStack: 3,
+          iconVariant: 'usedefault'
+        });
         return;
       }
       
@@ -141,7 +205,20 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
         });
       };
       reader.onerror = () => {
-        enqueueSnackbar('Error al cargar la imagen', { variant: 'error' });
+        openSnackbar({
+          open: true,
+          message: 'Error al cargar la imagen',
+          variant: 'alert',
+          alert: { color: 'error', variant: 'filled' },
+          anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
+          transition: 'Fade',
+          close: false,
+          action: false,
+          actionButton: false,
+          dense: false,
+          maxStack: 3,
+          iconVariant: 'usedefault'
+        });
       };
       reader.readAsDataURL(file);
       setManualProduct(prev => ({ ...prev, ImageFile: file, Origin: 'manual' }));

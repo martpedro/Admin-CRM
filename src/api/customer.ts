@@ -73,10 +73,30 @@ export async function insertCustomer(newCustomer: CustomerList) {
         'Content-Type': 'application/json'
       }
     });
+
+    // Verificar si hay advertencias de dominio duplicado
+    if (response.data?.Message?.warning) {
+      const warning = response.data.Message.warning;
+      if (warning.type === 'DOMAIN_WARNING') {
+        openSnackbar({ 
+          ...defaultSnackbar, 
+          message: `Cliente creado exitosamente. ${warning.message}`, 
+          alert: { ...defaultSnackbar.alert, color: 'warning' }
+        });
+      }
+    } else {
+      openSnackbar({ 
+        ...defaultSnackbar, 
+        message: 'Cliente creado exitosamente.', 
+        alert: { ...defaultSnackbar.alert, color: 'success' } 
+      });
+    }
+
     mutate(
       endpoints.key + endpoints.list,
       (currentCustomer: any) => {
-        const customerWithId = { ...newCustomer, id: response.data.id || (currentCustomer.customers.length + 1) };
+        const customerData = response.data?.Message?.customer || response.data;
+        const customerWithId = { ...newCustomer, id: customerData.id || customerData.Id || (currentCustomer.customers.length + 1) };
         const addedCustomer: CustomerList[] = [...currentCustomer.customers, customerWithId];
         return {
           ...currentCustomer,
@@ -85,11 +105,49 @@ export async function insertCustomer(newCustomer: CustomerList) {
       },
       false
     );
-    openSnackbar({ ...defaultSnackbar, message: 'Cliente creado exitosamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
-    return { success: true, data: response.data };
+
+    return { 
+      success: true, 
+      data: response.data,
+      warning: response.data?.Message?.warning || null
+    };
   } catch (error: any) {
+    console.error('Error creating customer:', error);
+    
+    // Manejar errores específicos de duplicación
+    if (error.response?.status === 409) {
+      const errorData = error.response.data;
+      
+      if (errorData.type === 'DUPLICATE_EMAIL') {
+        const existingCustomer = errorData.existingCustomer;
+        const assignedTo = existingCustomer?.assignedTo 
+          ? `${existingCustomer.assignedTo.name} (${existingCustomer.assignedTo.email})`
+          : 'Sin asignar';
+        
+        const detailedMessage = `El correo electrónico ya existe. Cliente "${existingCustomer?.name || 'N/A'}" asignado a: ${assignedTo}`;
+        
+        openSnackbar({ 
+          ...defaultSnackbar, 
+          message: detailedMessage, 
+          alert: { ...defaultSnackbar.alert, color: 'error' }
+        });
+        
+        return { 
+          success: false, 
+          error: detailedMessage,
+          type: 'DUPLICATE_EMAIL',
+          existingCustomer
+        };
+      }
+    }
+    
     const errorMessage = error.response?.data?.message || error.message || 'Error al crear el cliente';
-    openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
+    openSnackbar({ 
+      ...defaultSnackbar, 
+      message: errorMessage, 
+      alert: { ...defaultSnackbar.alert, color: 'error' } 
+    });
+    
     return { success: false, error: errorMessage };
   }
 }
@@ -120,6 +178,31 @@ export async function updateCustomer(customerId: number, updatedCustomer: Custom
     const errorMessage = error.response?.data?.message || error.message || 'Error al actualizar el cliente';
     openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
     return { success: false, error: errorMessage };
+  }
+}
+
+// Función para validar duplicación antes de crear/actualizar
+export async function validateCustomerDuplication(email: string, excludeCustomerId?: number) {
+  try {
+    const response = await axiosServices.post('/api/Customer/validate-duplication', {
+      email,
+      excludeCustomerId
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return {
+      success: true,
+      data: response.data?.Message || response.data
+    };
+  } catch (error: any) {
+    console.error('Error validating customer duplication:', error);
+    return {
+      success: false,
+      error: error.response?.data?.message || error.message || 'Error al validar duplicación'
+    };
   }
 }
 

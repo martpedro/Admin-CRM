@@ -45,6 +45,8 @@ import SendQuotationEmailDialog from 'components/quotations/SendQuotationEmailDi
 import DeleteQuotationDialog from 'components/quotations/DeleteQuotationDialog';
 import Loader from 'components/Loader';
 import { sendQuotationEmail } from 'api/quotations';
+import AdvisorFilter from 'components/AdvisorFilter';
+import { useQuotationDataScope } from 'hooks/useDataScope';
 
 // types
 import { Quotation } from 'api/quotations';
@@ -59,6 +61,8 @@ interface StatusTab {
 }
 
 const QuotationsList = () => {
+  const { showAdvisorFilter, canViewAll, dataScope } = useQuotationDataScope();
+  
   const [openSendEmail, setOpenSendEmail] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [quotationToSend, setQuotationToSend] = useState<null | Quotation>(null);
@@ -69,6 +73,7 @@ const QuotationsList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<StatusKey>('todas');
   const [statusChangeLoading, setStatusChangeLoading] = useState<number | null>(null);
+  const [selectedAdvisor, setSelectedAdvisor] = useState<string | number | 'all'>('all');
   
   const theme = useTheme();
   const navigate = useNavigate();
@@ -156,9 +161,17 @@ const QuotationsList = () => {
     { key: 'Cerrada', label: 'Cerradas', count: statusCounts.Cerrada }
   ];
 
-  // Filtrar cotizaciones solo por búsqueda (el estado ya está filtrado por el hook)
+  // Filtrar cotizaciones por búsqueda y asesor
   const filteredQuotations = useMemo(() => {
     let filtered = quotationsData;
+
+    // Aplicar filtro por asesor según permisos
+    if (showAdvisorFilter && selectedAdvisor !== 'all') {
+      filtered = filtered.filter(quotation => {
+        const advisorId = quotation.User?.Id;
+        return advisorId === selectedAdvisor;
+      });
+    }
 
     // Filtrar por búsqueda
     if (searchTerm) {
@@ -174,7 +187,7 @@ const QuotationsList = () => {
     }
 
     return filtered;
-  }, [quotationsData, searchTerm]);
+  }, [quotationsData, searchTerm, showAdvisorFilter, selectedAdvisor]);
 
   if (error) {
     return (
@@ -199,18 +212,26 @@ const QuotationsList = () => {
 
       {/* Header con búsqueda y botón crear */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <OutlinedInput
-          id="search-quotations"
-          startAdornment={
-            <InputAdornment position="start">
-              <SearchNormal1 size={16} color={theme.palette.grey[500]} />
-            </InputAdornment>
-          }
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder={intl.formatMessage({ id: 'search-placeholder' })}
-          sx={{ width: { xs: '100%', sm: 400 } }}
-        />
+        <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 2, flex: 1 }}>
+          <OutlinedInput
+            id="search-quotations"
+            startAdornment={
+              <InputAdornment position="start">
+                <SearchNormal1 size={16} color={theme.palette.grey[500]} />
+              </InputAdornment>
+            }
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={intl.formatMessage({ id: 'search-placeholder' })}
+            sx={{ flex: 1, minWidth: 200 }}
+          />
+          
+          <AdvisorFilter
+            module="quotation"
+            selectedAdvisor={selectedAdvisor}
+            onAdvisorChange={setSelectedAdvisor}
+          />
+        </Stack>
 
         <Button
           variant="contained"

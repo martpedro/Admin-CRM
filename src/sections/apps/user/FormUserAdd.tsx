@@ -42,6 +42,7 @@ import { useFormik, Form, FormikProvider } from 'formik';
 // project-imports
 import AlertUserDelete from './AlertUserDelete';
 import Avatar from 'components/@extended/Avatar';
+import AvatarWithInitials from 'components/AvatarWithInitials';
 import IconButton from 'components/@extended/IconButton';
 import CircularWithPath from 'components/@extended/progress/CircularWithPath';
 
@@ -50,6 +51,7 @@ import { useGetMenuPermissions, setUserMenus, getUserMenus, type MenuPermissionI
 import { openSnackbar } from 'api/snackbar';
 import { Gender } from 'config';
 import { ImagePath, getImageUrl } from 'utils/getImageUrl';
+import { generateInitialsAvatar, getInitials } from 'utils/avatar-generator';
 
 // assets
 import { Camera, CloseCircle, Trash } from 'iconsax-react';
@@ -117,7 +119,7 @@ const getInitialValues = (user: any | null) => {
     avatar: 1,
     gender: Gender.FEMALE,
     role: '',
-  letterasigned: '',
+    letterasigned: '',
     orders: 0,
     progress: 50,
     status: 2,
@@ -164,6 +166,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
   const [avatar, setAvatar] = useState<string | undefined>(
     getImageUrl(`avatar-${user && user !== null && user?.avatar ? user.avatar : 1}.png`, ImagePath.USERS)
   );
+  const [generatedAvatar, setGeneratedAvatar] = useState<string>('');
 
   // Estado para la empresa seleccionada
   const [empresa, setEmpresa] = useState<CompanyInfo | null>(null);
@@ -191,9 +194,9 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
     const loadMenus = async () => {
       if (!user) return;
       try {
-  const list = await getUserMenus(Number((user as any).Id ?? user.id));
-  setAssignedMenuItems(list);
-  setSelectedMenus(list.map((m: any) => m.menuKey).filter(Boolean));
+        const list = await getUserMenus(Number((user as any).Id ?? user.id));
+        setAssignedMenuItems(list);
+        setSelectedMenus(list.map((m: any) => m.menuKey).filter(Boolean));
       } catch {}
     };
     loadMenus();
@@ -245,7 +248,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
             closeModal();
           });
         } else {
-      console.log('newUser insert', newUser);
+          console.log('newUser insert', newUser);
           await insertUser(newUser, selectedImage).then(async (saved: any) => {
             const newId = Number(saved?.Id || saved?.id || 0);
             if (newId && selectedMenus.length) {
@@ -254,7 +257,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
 
             openSnackbar({
               open: true,
-        message: 'Usuario agregado exitosamente.',
+              message: 'Usuario agregado exitosamente.',
               variant: 'alert',
               alert: {
                 color: 'success'
@@ -269,6 +272,28 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
   });
 
   const { errors, touched, handleSubmit, isSubmitting, getFieldProps, setFieldValue } = formik;
+
+  // Generar avatar con iniciales cuando cambian los nombres
+  useEffect(() => {
+    const generateDefaultAvatar = async () => {
+      const firstName = formik.values.firstName;
+      const lastName = formik.values.lastName;
+      
+      if (firstName && !selectedImage && !user?.avatar) {
+        try {
+          const avatarDataURL = await generateInitialsAvatar(firstName, lastName, 72);
+          setGeneratedAvatar(avatarDataURL);
+          if (!selectedImage) {
+            setAvatar(avatarDataURL);
+          }
+        } catch (error) {
+          console.error('Error generando avatar:', error);
+        }
+      }
+    };
+    
+    generateDefaultAvatar();
+  }, [formik.values.firstName, formik.values.lastName, selectedImage, user?.avatar]);
 
   if (loading)
     return (
@@ -300,7 +325,14 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                         cursor: 'pointer'
                       }}
                     >
-                      <Avatar alt="Avatar 1" src={avatar} sx={{ width: 72, height: 72, border: '1px dashed' }} />
+                      <AvatarWithInitials 
+                        name={formik.values.firstName}
+                        lastName={formik.values.lastName}
+                        src={avatar}
+                        size={72}
+                        sx={{ border: '1px dashed #ccc' }}
+                        fallbackToInitials={true}
+                      />
                       <Box
                         sx={(theme) => ({
                           position: 'absolute',
@@ -341,8 +373,8 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                         <Select
                           id="empresa-select"
                           value={empresa?.id || ''}
-                          onChange={e => {
-                            const found = empresas?.find(emp => emp.id === Number(e.target.value));
+                          onChange={(e) => {
+                            const found = empresas?.find((emp) => emp.id === Number(e.target.value));
                             setEmpresa(found || null);
                             if (found?.quotationLetter) {
                               setFieldValue('letterasigned', String(found.quotationLetter).toUpperCase());
@@ -354,9 +386,12 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                           <MenuItem value="">
                             <em>{loadingEmpresas ? 'Cargando empresas...' : 'Selecciona una empresa'}</em>
                           </MenuItem>
-                          {empresas && empresas.map(emp => (
-                            <MenuItem key={emp.id} value={emp.id}>{emp.razonSocial}</MenuItem>
-                          ))}
+                          {empresas &&
+                            empresas.map((emp) => (
+                              <MenuItem key={emp.id} value={emp.id}>
+                                {emp.razonSocial}
+                              </MenuItem>
+                            ))}
                         </Select>
                       </Stack>
                     </Grid>
@@ -386,7 +421,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                         />
                       </Stack>
                     </Grid>
-                    
+
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-middleName">Apellido Materno</InputLabel>
@@ -413,8 +448,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                         />
                       </Stack>
                     </Grid>
-                    
-                   
+
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-letterasigned">Letra de Cotización</InputLabel>
@@ -432,19 +466,14 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                           }}
                           value={formik.values.letterasigned}
                           error={Boolean(touched.letterasigned && errors.letterasigned)}
-                          helperText={touched.letterasigned && typeof (errors as any).letterasigned === 'string' ? (errors as any).letterasigned : undefined}
+                          helperText={
+                            touched.letterasigned && typeof (errors as any).letterasigned === 'string'
+                              ? (errors as any).letterasigned
+                              : undefined
+                          }
                         />
                       </Stack>
                     </Grid>
-                    {/* <Grid size={{ xs: 12, sm: 6 }}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-gender">Género</InputLabel>
-                        <RadioGroup row aria-label="payment-card" {...getFieldProps('gender')}>
-                          <FormControlLabel control={<Radio value={Gender.FEMALE} />} label={Gender.FEMALE} />
-                          <FormControlLabel control={<Radio value={Gender.MALE} />} label={Gender.MALE} />
-                        </RadioGroup>
-                      </Stack>
-                    </Grid> */}
                     {/* Menús visibles */}
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <Stack sx={{ gap: 1 }}>
@@ -453,7 +482,9 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                           id="user-menus"
                           multiple
                           value={selectedMenus}
-                          onChange={(e) => setSelectedMenus(typeof e.target.value === 'string' ? e.target.value.split(',') : (e.target.value as string[]))}
+                          onChange={(e) =>
+                            setSelectedMenus(typeof e.target.value === 'string' ? e.target.value.split(',') : (e.target.value as string[]))
+                          }
                           input={<OutlinedInput id="select-menus" placeholder="Seleccionar menús" />}
                           renderValue={(selected) => {
                             const keys = selected as string[];
@@ -509,62 +540,6 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                         )}
                       </Stack>
                     </Grid>
-                    {/* <Grid size={{ xs: 12, sm: 6 }}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-contact">Contacto</InputLabel>
-                        <TextField
-                          fullWidth
-                          id="user-contact"
-                          placeholder="Ingrese el contacto"
-                          {...getFieldProps('contact')}
-                          error={Boolean(touched.contact && errors.contact)}
-                          helperText={touched.contact && errors.contact}
-                        />
-                      </Stack>
-                    </Grid> */}
-                    {/* <Grid size={{ xs: 12, sm: 6 }}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-country">País</InputLabel>
-                        <TextField
-                          fullWidth
-                          id="user-country"
-                          placeholder="Ingrese el país"
-                          {...getFieldProps('country')}
-                          error={Boolean(touched.country && errors.country)}
-                          helperText={touched.country && errors.country}
-                        />
-                      </Stack>
-                    </Grid> */}
-                    {/* <Grid size={12}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-location">Ubicación</InputLabel>
-                        <TextField
-                          fullWidth
-                          id="user-location"
-                          multiline
-                          rows={2}
-                          placeholder="Ingrese la ubicación"
-                          {...getFieldProps('location')}
-                          error={Boolean(touched.location && errors.location)}
-                          helperText={touched.location && errors.location}
-                        />
-                      </Stack>
-                    </Grid> */}
-                    {/* <Grid size={12}>
-                      <Stack sx={{ gap: 1 }}>
-                        <InputLabel htmlFor="user-about">Acerca del cliente</InputLabel>
-                        <TextField
-                          fullWidth
-                          id="user-about"
-                          multiline
-                          rows={2}
-                          placeholder="Ingrese información del cliente"
-                          {...getFieldProps('about')}
-                          error={Boolean(touched.about && errors.about)}
-                          helperText={touched.about && errors.about}
-                        />
-                      </Stack>
-                    </Grid> */}
                     <Grid size={12}>
                       <Stack sx={{ gap: 1 }}>
                         <InputLabel htmlFor="user-skills">Subsidiarias</InputLabel>
@@ -595,25 +570,25 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                       </Stack>
                     </Grid>
                     <Grid size={12}>
-                        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <Stack sx={{ gap: 0.5 }}>
                           <Typography variant="subtitle1">Esta Inactivo</Typography>
                           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          Significa que no podra acceder al sistema
+                            Significa que no podra acceder al sistema
                           </Typography>
                         </Stack>
                         <FormControlLabel
                           control={
-                          <Switch
-                            checked={formik.values.isInactive}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setFieldValue('isInactive', e.target.checked)}
-                            sx={{ mt: 0 }}
-                          />
+                            <Switch
+                              checked={formik.values.isInactive}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => setFieldValue('isInactive', e.target.checked)}
+                              sx={{ mt: 0 }}
+                            />
                           }
                           label=""
                           labelPlacement="start"
                         />
-                        </Stack>
+                      </Stack>
                     </Grid>
                   </Grid>
                 </Grid>
@@ -636,11 +611,7 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
                     <Button color="error" onClick={closeModal}>
                       Cancel
                     </Button>
-                    <Button
-                      type="submit"
-                      variant="contained"
-                      disabled={isSubmitting || (user ? !canUpdate('user') : !canCreate('user'))}
-                    >
+                    <Button type="submit" variant="contained" disabled={isSubmitting || (user ? !canUpdate('user') : !canCreate('user'))}>
                       {user ? 'Editar' : 'Agregar'}
                     </Button>
                   </Stack>
@@ -651,7 +622,12 @@ export default function FormUserAdd({ user, closeModal }: { user: UserList | nul
         </LocalizationProvider>
       </FormikProvider>
       {user && canDelete('user') && (
-        <AlertUserDelete id={Number(((user as any).Id ?? user.id) || 0)} title={user.name} open={openAlert} handleClose={handleAlertClose} />
+        <AlertUserDelete
+          id={Number(((user as any).Id ?? user.id) || 0)}
+          title={user.name}
+          open={openAlert}
+          handleClose={handleAlertClose}
+        />
       )}
     </>
   );

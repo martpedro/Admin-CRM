@@ -110,11 +110,11 @@ export default function UserList() {
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <MenuItem onClick={handleLogout}>Logout</MenuItem>
-        <MenuItem component={Link} to="/apps/profiles/user/personal" onClick={handleClose}>
-          Profile
+        <MenuItem onClick={handleLogout}>Cerrar Sesión</MenuItem>
+        <MenuItem component={Link} to="/profiles/user/personal" onClick={handleClose}>
+          Perfil
         </MenuItem>
-        <MenuItem component={Link} to="/apps/profiles/account/my-account" onClick={handleClose}>
+        <MenuItem component={Link} to="/profiles/account/my-account" onClick={handleClose}>
           My account
         </MenuItem>
       </Menu>
