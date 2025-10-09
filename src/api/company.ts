@@ -28,13 +28,15 @@ export const companyApi = {
       openSnackbar({ ...defaultSnackbar, message: 'Empresas obtenidas correctamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
       return (companies || []).map((c: any) => ({
         id: c.Id,
-        razonSocial: c.LegalName || c.Name,
+        razonSocial: c.Name || '',
+        nombreLegal: c.LegalName || '',
         rfc: c.TaxId || '',
         direccion: c.Address || '',
         telefonos: c.Phones || '',
         whatsapp: c.WhatsApp || '',
         pagina: c.WebPage || '',
-        quotationLetter: c.QuotationLetter || undefined
+        quotationLetter: c.QuotationLetter || undefined,
+        isActive: c.IsActive ?? true
       }));
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Error al obtener empresas';
@@ -50,13 +52,15 @@ export const companyApi = {
       openSnackbar({ ...defaultSnackbar, message: 'Empresa obtenida correctamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
       return {
         id: c.Id,
-        razonSocial: c.LegalName || c.Name,
+        razonSocial: c.Name || '',
+        nombreLegal: c.LegalName || '',
         rfc: c.TaxId || '',
         direccion: c.Address || '',
         telefonos: c.Phones || '',
         whatsapp: c.WhatsApp || '',
         pagina: c.WebPage || '',
-        quotationLetter: c.QuotationLetter || undefined
+        quotationLetter: c.QuotationLetter || undefined,
+        isActive: c.IsActive ?? true
       };
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Error al obtener empresa';
@@ -69,9 +73,10 @@ export const companyApi = {
     try {
       const payload = {
         Name: input.razonSocial,
-        LegalName: input.razonSocial,
+        LegalName: input.nombreLegal || input.razonSocial,
         TaxId: input.rfc,
         QuotationLetter: input.quotationLetter || 'A',
+        IsActive: input.isActive ?? true,
         Address: input.direccion,
         Phones: input.telefonos,
         WhatsApp: input.whatsapp,
@@ -82,12 +87,14 @@ export const companyApi = {
       openSnackbar({ ...defaultSnackbar, message: 'Empresa creada correctamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
       return {
         id: c.Id,
-        razonSocial: c.LegalName || c.Name,
+        razonSocial: c.Name || '',
+        nombreLegal: c.LegalName || '',
         rfc: c.TaxId || '',
         direccion: c.Address || '',
         telefonos: c.Phones || '',
         whatsapp: c.WhatsApp || '',
-        pagina: c.WebPage || ''
+        pagina: c.WebPage || '',
+        isActive: c.IsActive ?? true
       };
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Error al crear empresa';
@@ -101,8 +108,9 @@ export const companyApi = {
       const payload = {
         Id: id,
         Name: input.razonSocial,
-        LegalName: input.razonSocial,
+        LegalName: input.nombreLegal || input.razonSocial,
         TaxId: input.rfc,
+        IsActive: input.isActive ?? true,
         Address: input.direccion,
         Phones: input.telefonos,
         WhatsApp: input.whatsapp,
@@ -113,12 +121,14 @@ export const companyApi = {
       openSnackbar({ ...defaultSnackbar, message: 'Empresa actualizada correctamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
       return {
         id: c.Id,
-        razonSocial: c.LegalName || c.Name,
+        razonSocial: c.Name || '',
+        nombreLegal: c.LegalName || '',
         rfc: c.TaxId || '',
         direccion: c.Address || '',
         telefonos: c.Phones || '',
         whatsapp: c.WhatsApp || '',
-        pagina: c.WebPage || ''
+        pagina: c.WebPage || '',
+        isActive: c.IsActive ?? true
       };
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Error al actualizar empresa';

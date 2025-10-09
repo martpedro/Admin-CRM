@@ -44,10 +44,20 @@ export default function CompanyListPage() {
   const columns = useMemo<ColumnDef<CompanyInfo>[]>(() => [
     { header: 'ID', accessorKey: 'id' },
     { header: 'Razón Social', accessorKey: 'razonSocial' },
+    { header: 'Nombre Legal', accessorKey: 'nombreLegal' },
     { header: 'RFC', accessorKey: 'rfc' },
     { header: 'Teléfonos', accessorKey: 'telefonos' },
     { header: 'WhatsApp', accessorKey: 'whatsapp' },
     { header: 'Página', accessorKey: 'pagina' },
+    { 
+      header: 'Estado', 
+      accessorKey: 'isActive',
+      cell: ({ row }) => (
+        <span style={{ color: row.original.isActive ? 'green' : 'red' }}>
+          {row.original.isActive ? 'Activo' : 'Inactivo'}
+        </span>
+      )
+    },
     {
       header: 'Acciones',
       cell: ({ row }) => (
@@ -80,7 +90,20 @@ export default function CompanyListPage() {
     <MainCard content={false}>
       <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ justifyContent: 'space-between', p: 3 }}>
         <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setOpen(true); }}>Agregar empresa</Button>
-        <CSVExport data={rows} headers={[{ label: 'ID', key: 'id' }, { label: 'Razón Social', key: 'razonSocial' }]} filename="empresas.csv" />
+        <CSVExport 
+          data={rows} 
+          headers={[
+            { label: 'ID', key: 'id' }, 
+            { label: 'Razón Social', key: 'razonSocial' },
+            { label: 'Nombre Legal', key: 'nombreLegal' },
+            { label: 'RFC', key: 'rfc' },
+            { label: 'Teléfonos', key: 'telefonos' },
+            { label: 'WhatsApp', key: 'whatsapp' },
+            { label: 'Página', key: 'pagina' },
+            { label: 'Estado', key: 'isActive' }
+          ]} 
+          filename="empresas.csv" 
+        />
       </Stack>
       <TableContainer>
         <Table>
