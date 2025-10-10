@@ -96,18 +96,20 @@ const EditQuotation = () => {
       try {
         const list = await (await import('api/quotations')).default.getAdvisors();
         if (!active) return;
-        const mapped = Array.isArray(list) ? list.map((u: any) => ({
-          Id: u.Id,
-          name: u.name || u.Name || '',
-          LastName: u.LastName || '',
-          MotherLastName: u.MotherLastName || '',
-          email: u.email || u.Email || '',
-          isActive: u.isActive !== false,
-          profile: u.profile || '',
-          Phone: u.Phone || '',
-          LetterAsign: u.LetterAsign || '',
-          password: u.password || ''
-        })) : [];
+        const mapped = Array.isArray(list)
+          ? list.map((u: any) => ({
+              Id: u.Id,
+              name: u.name || u.Name || '',
+              LastName: u.LastName || '',
+              MotherLastName: u.MotherLastName || '',
+              email: u.email || u.Email || '',
+              isActive: u.isActive !== false,
+              profile: u.profile || '',
+              Phone: u.Phone || '',
+              LetterAsign: u.LetterAsign || '',
+              password: u.password || ''
+            }))
+          : [];
         setAdvisors(mapped);
       } catch (e: any) {
         if (!active) return;
@@ -117,25 +119,29 @@ const EditQuotation = () => {
       }
     };
     load();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Preparar valores iniciales cuando la cotización esté cargada
-  const initialValues = quotation ? {
-    Id: quotation.Id,
-    CustomerId: customers.length > 0 ? (quotation.Customer?.Id || 0) : 0,
-    UserId: advisors.length > 0 ? (quotation.User?.Id || (auth?.user as any)?.Id || 0) : 0,
-    AddressId: quotation.address?.Id || 0,
-    CompanyId: quotation.Company?.Id || 0,
-    AdvancePayment: quotation.AdvancePayment || '',
-    LiquidationPayment: quotation.LiquidationPayment || '',
-    TimeCredit: quotation.TimeCredit || '',
-    TimeValidation: quotation.TimeValidation || '',
-    SubTotal: quotation.SubTotal || 0,
-    Tax: quotation.Tax || 0,
-    Total: quotation.Total || 0,
-    products: (quotation.products || []).map((p: QuotationProduct) => ({ ...p }))
-  } : null;
+  const initialValues = quotation
+    ? {
+        Id: quotation.Id,
+        CustomerId: customers.length > 0 ? quotation.Customer?.Id || 0 : 0,
+        UserId: advisors.length > 0 ? quotation.User?.Id || (auth?.user as any)?.Id || 0 : 0,
+        AddressId: quotation.address?.Id || 0,
+        CompanyId: quotation.Company?.Id || 0,
+        AdvancePayment: quotation.AdvancePayment || '',
+        LiquidationPayment: quotation.LiquidationPayment || '',
+        TimeCredit: quotation.TimeCredit || '',
+        TimeValidation: quotation.TimeValidation || '',
+        SubTotal: quotation.SubTotal || 0,
+        Tax: quotation.Tax || 0,
+        Total: quotation.Total || 0,
+        products: (quotation.products || []).map((p: QuotationProduct) => ({ ...p }))
+      }
+    : null;
 
   // Set selected entities once quotation loaded
   useEffect(() => {
@@ -195,7 +201,7 @@ const EditQuotation = () => {
         notifications.error(updateResult.error || 'Error al guardar la cotización');
         return;
       }
-      
+
       // Luego enviar por correo
       if (quotation?.Id) {
         await sendQuotationEmail({
@@ -205,10 +211,10 @@ const EditQuotation = () => {
           message: `Estimado/a ${selectedCustomer.Name},\n\nEsperamos que se encuentre bien. Adjunto encontrará la cotización #${quotation.NumberQuotation} solicitada.\n\nQuedamos a la espera de sus comentarios.\n\nSaludos cordiales.`
         });
       }
-      
+
       // Usar función centralizada para refrescar cache
       await refreshQuotationsCache(quotationId);
-      
+
       notifications.success('Cotización guardada y enviada por correo exitosamente');
     } catch (e: any) {
       notifications.error(e?.message || 'Error al guardar y enviar');
@@ -256,76 +262,111 @@ const EditQuotation = () => {
                         >
                           <MenuItem value={0}>Seleccionar empresa</MenuItem>
                           {companies.map((company: any) => (
-                            <MenuItem key={company.Id} value={company.Id}>{company.Name || 'Sin nombre'}</MenuItem>
+                            <MenuItem key={company.Id} value={company.Id}>
+                              {company.Name || 'Sin nombre'}
+                            </MenuItem>
                           ))}
                         </Select>
                         {touched.CompanyId && errors.CompanyId && <FormHelperText>{String(errors.CompanyId)}</FormHelperText>}
                       </FormControl>
-                                          <Button variant="outlined" color="secondary" onClick={() => setOpenSendEmail(true)}>
-                                            Enviar por correo
-                                          </Button>
+                      <Button variant="outlined" color="secondary" onClick={() => setOpenSendEmail(true)}>
+                        Enviar por correo
+                      </Button>
                     </Grid>
                     {selectedCompany && (
                       <Grid size={{ xs: 12, md: 6 }}>
                         <Card variant="outlined">
                           <CardHeader title="Resumen de la Empresa" titleTypographyProps={{ variant: 'h6', fontSize: '1rem' }} />
                           <CardContent sx={{ pt: 0.5, pb: 1 }}>
-                                        <SendQuotationEmailDialog
-                                          open={openSendEmail}
-                                          onClose={() => setOpenSendEmail(false)}
-                                          loading={sendingEmail}
-                                          defaultTo={selectedCustomer?.Email || ''}
-                                          onSend={async ({ to, cc, message }) => {
-                                            setSendingEmail(true);
-                                            try {
-                                              if (!quotation?.Id) throw new Error('ID de cotización no disponible');
-                                              await sendQuotationEmail({
-                                                quotationId: quotation.Id,
-                                                to,
-                                                cc,
-                                                message
-                                              });
-                                              notifications.success('Correo enviado correctamente');
-                                              setOpenSendEmail(false);
-                                            } catch (err: any) {
-                                              notifications.error('Error al enviar el correo');
-                                            } finally {
-                                              setSendingEmail(false);
-                                            }
-                                          }}
-                                        />
+                            <SendQuotationEmailDialog
+                              open={openSendEmail}
+                              onClose={() => setOpenSendEmail(false)}
+                              loading={sendingEmail}
+                              defaultTo={selectedCustomer?.Email || ''}
+                              onSend={async ({ to, cc, message }) => {
+                                setSendingEmail(true);
+                                try {
+                                  if (!quotation?.Id) throw new Error('ID de cotización no disponible');
+                                  await sendQuotationEmail({
+                                    quotationId: quotation.Id,
+                                    to,
+                                    cc,
+                                    message
+                                  });
+                                  notifications.success('Correo enviado correctamente');
+                                  setOpenSendEmail(false);
+                                } catch (err: any) {
+                                  notifications.error('Error al enviar el correo');
+                                } finally {
+                                  setSendingEmail(false);
+                                }
+                              }}
+                            />
                             <Grid container spacing={1}>
                               <Grid size={12}>
-                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>Razón Social:</Typography>
-                                <Typography variant="body2" component="span">{selectedCompany.LegalName || selectedCompany.Name || 'No disponible'}</Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>
+                                  Razón Social:
+                                </Typography>
+                                <Typography variant="body2" component="span">
+                                  {selectedCompany.LegalName || selectedCompany.Name || 'No disponible'}
+                                </Typography>
                               </Grid>
                               <Grid size={{ xs: 12, sm: 6 }}>
-                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>RFC:</Typography>
-                                <Typography variant="body2" component="span">{selectedCompany.TaxId || 'No disponible'}</Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>
+                                  RFC:
+                                </Typography>
+                                <Typography variant="body2" component="span">
+                                  {selectedCompany.TaxId || 'No disponible'}
+                                </Typography>
                               </Grid>
                               <Grid size={{ xs: 12, sm: 6 }}>
-                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>Teléfonos:</Typography>
-                                <Typography variant="body2" component="span">{selectedCompany.Phones || selectedCompany.Phone || 'No disponible'}</Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>
+                                  Teléfonos:
+                                </Typography>
+                                <Typography variant="body2" component="span">
+                                  {selectedCompany.Phones || selectedCompany.Phone || 'No disponible'}
+                                </Typography>
                               </Grid>
                               <Grid size={{ xs: 12, sm: 6 }}>
-                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>WhatsApp:</Typography>
-                                <Typography variant="body2" component="span">{selectedCompany.WhatsApp || 'No disponible'}</Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>
+                                  WhatsApp:
+                                </Typography>
+                                <Typography variant="body2" component="span">
+                                  {selectedCompany.WhatsApp || 'No disponible'}
+                                </Typography>
                               </Grid>
                               <Grid size={{ xs: 12, sm: 6 }}>
-                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>Página:</Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>
+                                  Página:
+                                </Typography>
                                 {selectedCompany.WebPage ? (
                                   <Typography variant="body2" component="span" color="primary">
-                                    <a href={selectedCompany.WebPage.startsWith('http') ? selectedCompany.WebPage : `https://${selectedCompany.WebPage}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                                    <a
+                                      href={
+                                        selectedCompany.WebPage.startsWith('http')
+                                          ? selectedCompany.WebPage
+                                          : `https://${selectedCompany.WebPage}`
+                                      }
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{ color: 'inherit', textDecoration: 'none' }}
+                                    >
                                       {selectedCompany.WebPage}
                                     </a>
                                   </Typography>
                                 ) : (
-                                  <Typography variant="body2" component="span">No disponible</Typography>
+                                  <Typography variant="body2" component="span">
+                                    No disponible
+                                  </Typography>
                                 )}
                               </Grid>
                               <Grid size={12}>
-                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>Dirección:</Typography>
-                                <Typography variant="body2" component="span">{selectedCompany.Address || 'No disponible'}</Typography>
+                                <Typography variant="caption" fontWeight={600} component="span" sx={{ mr: 0.5 }}>
+                                  Dirección:
+                                </Typography>
+                                <Typography variant="body2" component="span">
+                                  {selectedCompany.Address || 'No disponible'}
+                                </Typography>
                               </Grid>
                             </Grid>
                           </CardContent>
@@ -403,7 +444,9 @@ const EditQuotation = () => {
                         >
                           <MenuItem value={0}>Seleccionar cliente</MenuItem>
                           {customers.map((customer: any) => (
-                            <MenuItem key={customer.Id} value={customer.Id}>{customer.Name} - {customer.Email || 'Sin email'}</MenuItem>
+                            <MenuItem key={customer.Id} value={customer.Id}>
+                              {customer.Name} - {customer.Email || 'Sin email'}
+                            </MenuItem>
                           ))}
                         </Select>
                         {touched.CustomerId && errors.CustomerId && <FormHelperText>{String(errors.CustomerId)}</FormHelperText>}
@@ -412,7 +455,13 @@ const EditQuotation = () => {
                     {selectedCustomer && (
                       <>
                         <Grid size={{ xs: 12, md: 4 }}>
-                          <TextField fullWidth size="small" label="CLIENTE" value={selectedCustomer.Name || ''} InputProps={{ readOnly: true }} />
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="CLIENTE"
+                            value={selectedCustomer.Name || ''}
+                            InputProps={{ readOnly: true }}
+                          />
                         </Grid>
                         <Grid size={{ xs: 12, md: 4 }}>
                           {customerAddresses.length > 0 ? (
@@ -433,11 +482,23 @@ const EditQuotation = () => {
                               {touched.AddressId && errors.AddressId && <FormHelperText>{String(errors.AddressId as any)}</FormHelperText>}
                             </FormControl>
                           ) : (
-                            <TextField fullWidth size="small" label="DIRECCIÓN" value={'Sin direcciones registradas'} InputProps={{ readOnly: true }} />
+                            <TextField
+                              fullWidth
+                              size="small"
+                              label="DIRECCIÓN"
+                              value={'Sin direcciones registradas'}
+                              InputProps={{ readOnly: true }}
+                            />
                           )}
                         </Grid>
                         <Grid size={{ xs: 12, md: 4 }}>
-                          <TextField fullWidth size="small" label="TELÉFONOS" value={selectedCustomer.Phone || ''} InputProps={{ readOnly: true }} />
+                          <TextField
+                            fullWidth
+                            size="small"
+                            label="TELÉFONOS"
+                            value={selectedCustomer.Phone || ''}
+                            InputProps={{ readOnly: true }}
+                          />
                         </Grid>
                       </>
                     )}
@@ -446,7 +507,7 @@ const EditQuotation = () => {
                         <InputLabel>Asesor</InputLabel>
                         <Select name="UserId" value={values.UserId} onChange={handleChange} onBlur={handleBlur}>
                           <MenuItem value={0}>Seleccionar asesor</MenuItem>
-                          {!loadingAdvisors && !advisorsError && values.UserId !== 0 && !advisors.some(a => a.Id === values.UserId) && (
+                          {!loadingAdvisors && !advisorsError && values.UserId !== 0 && !advisors.some((a) => a.Id === values.UserId) && (
                             <MenuItem value={values.UserId} disabled>
                               {(auth?.user as any)?.name || 'Usuario actual'} (cargando permisos)
                             </MenuItem>
@@ -457,7 +518,9 @@ const EditQuotation = () => {
                             <MenuItem disabled>No hay asesores disponibles</MenuItem>
                           )}
                           {advisors.map((user: any) => (
-                            <MenuItem key={user.Id} value={user.Id}>{user.name || 'Sin nombre'} {user.LastName || ''}</MenuItem>
+                            <MenuItem key={user.Id} value={user.Id}>
+                              {user.name || 'Sin nombre'} {user.LastName || ''}
+                            </MenuItem>
                           ))}
                         </Select>
                         {touched.UserId && errors.UserId && <FormHelperText>{String(errors.UserId)}</FormHelperText>}
@@ -555,7 +618,11 @@ const EditQuotation = () => {
                                     <Avatar src={product.Image} alt={product.Code} sx={{ width: 50, height: 50 }} variant="rounded">
                                       {product.Code?.charAt(0) || 'P'}
                                     </Avatar>
-                                    <Chip size="small" label={product.Origin === 'catalog' ? 'Catálogo' : 'Manual'} color={product.Origin === 'catalog' ? 'primary' : 'default'} />
+                                    <Chip
+                                      size="small"
+                                      label={product.Origin === 'catalog' ? 'Catálogo' : 'Manual'}
+                                      color={product.Origin === 'catalog' ? 'primary' : 'default'}
+                                    />
                                   </Box>
                                 </TableCell>
                                 <TableCell>
@@ -590,10 +657,10 @@ const EditQuotation = () => {
                                         />
                                       }
                                       label="Utilidad extra"
-                                      sx={{ 
+                                      sx={{
                                         fontSize: '0.75rem',
-                                        '& .MuiFormControlLabel-label': { 
-                                          fontSize: '0.75rem' 
+                                        '& .MuiFormControlLabel-label': {
+                                          fontSize: '0.75rem'
                                         }
                                       }}
                                     />
@@ -818,7 +885,6 @@ const EditQuotation = () => {
                           </Typography>
                         </Box>
                         <Divider />
-                        
                       </Stack>
                     </Box>
                   </Box>
@@ -828,13 +894,15 @@ const EditQuotation = () => {
               {/* Acciones */}
               <Grid size={12}>
                 <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  {quotation?.Id && (
-                    <QuotationPdfViewer quotationId={quotation.Id} quotationNumber={quotation.NumberQuotation} />
-                  )}
-                  <Button variant="outlined" onClick={() => navigate('/quotations')}>Volver</Button>
-                  <Button type="submit" variant="contained">Guardar Cambios</Button>
-                  <Button 
-                    variant="contained" 
+                  {quotation?.Id && <QuotationPdfViewer quotationId={quotation.Id} quotationNumber={quotation.NumberQuotation} />}
+                  <Button variant="outlined" onClick={() => navigate('/quotations')}>
+                    Volver
+                  </Button>
+                  <Button type="submit" variant="contained">
+                    Guardar Cambios
+                  </Button>
+                  <Button
+                    variant="contained"
                     color="secondary"
                     disabled={savingAndSending || !selectedCustomer?.Email}
                     onClick={() => handleSaveAndSendEmail(values)}
@@ -870,4 +938,3 @@ const EditQuotation = () => {
 };
 
 export default EditQuotation;
-

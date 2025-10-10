@@ -220,7 +220,7 @@ export const quotationsApi = {
   uploadProductImage: async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('image', file);
-    const response = await axiosServices.post('http://localhost/admin/upload-image.php', formData, {
+    const response = await axiosServices.post('https://crm.regaloscorporativosypromocionales.com.mx/upload-image.php', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
     return response.data?.url || response.data?.imageUrl || response.data?.link || '';

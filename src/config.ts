@@ -51,7 +51,7 @@ export const linkedInColor = '#0077b5';
 const config: DefaultConfigProps = {
   fontFamily: `Inter var`,
   i18n: 'es',
-  menuOrientation: MenuOrientation.HORIZONTAL,
+  menuOrientation: MenuOrientation.VERTICAL,
   menuCaption: true,
   miniDrawer: false,
   container: true,
