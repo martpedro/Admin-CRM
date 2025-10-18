@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { Button, Dialog, DialogTitle, DialogContent, DialogActions, Box, CircularProgress, Typography, IconButton, Tooltip } from '@mui/material';
 import { DocumentDownload, DocumentText } from 'iconsax-react';
 import quotationsApi from 'api/quotations';
-import { enqueueSnackbar } from 'notistack';
+import { openSnackbar } from 'api/snackbar';
+import { SnackbarProps } from 'types/snackbar';
 
 export interface QuotationPdfViewerProps {
   quotationId: number;
@@ -40,7 +41,7 @@ const QuotationPdfViewer = ({ quotationId, quotationNumber, variant = 'button', 
       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
       setPdfUrl(url);
     } catch (e: any) {
-      enqueueSnackbar(e?.message || 'No se pudo generar el PDF', { variant: 'error' });
+        openSnackbar({ open: true, message: e?.message || 'No se pudo generar el PDF', variant: 'alert', alert: { color: 'error' } } as SnackbarProps);
       // Cerrar si falla
       setOpen(false);
     } finally {

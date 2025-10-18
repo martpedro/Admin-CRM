@@ -44,7 +44,7 @@ import {
 import Grid from '@mui/material/Grid2';
 
 // third-party
-import { useSnackbar } from 'notistack';
+import { openSnackbar } from 'api/snackbar';
 
 // project-imports
 import Breadcrumbs from 'components/@extended/Breadcrumbs';
@@ -86,7 +86,7 @@ const CreateQuotation = () => {
   const auth = useContext(JWTContext);
   const currentUserId = (auth?.user as any)?.Id || (auth?.user as any)?.id || 0;
   const { createQuotation } = useQuotationOperations();
-  const { enqueueSnackbar } = useSnackbar();
+  // Replaced notistack enqueueSnackbar with project-wide openSnackbar
   const { customers } = useCustomers();
   const [advisors, setAdvisors] = useState<ApiUser[]>([]);
   const [loadingAdvisors, setLoadingAdvisors] = useState(false);
@@ -169,7 +169,7 @@ const CreateQuotation = () => {
       const result = await createQuotation(values);
       if (result.success) {
         const created = result.data;
-        enqueueSnackbar('Cotización creada exitosamente', { variant: 'success' });
+  openSnackbar({ open: true, message: 'Cotización creada exitosamente', variant: 'alert', alert: { color: 'success' } } as any);
         // Redirigir a la pantalla de edición con el Id devuelto
         if (created && created.Id) {
           navigate(`/quotations/edit/${created.Id}`);
@@ -178,17 +178,17 @@ const CreateQuotation = () => {
           navigate('/quotations');
         }
       } else {
-        enqueueSnackbar(result.error || 'Error al crear la cotización', { variant: 'error' });
+  openSnackbar({ open: true, message: result.error || 'Error al crear la cotización', variant: 'alert', alert: { color: 'error' } } as any);
       }
     } catch (error: any) {
-      enqueueSnackbar(error?.message || 'Error inesperado al crear la cotización', { variant: 'error' });
+  openSnackbar({ open: true, message: error?.message || 'Error inesperado al crear la cotización', variant: 'alert', alert: { color: 'error' } } as any);
     }
   };
 
   const handleCreateAndSendEmail = async (values: QuotationCreate) => {
     const selectedCustomer = customers.find((c: any) => c.Id === values.CustomerId);
     if (!selectedCustomer?.Email) {
-      enqueueSnackbar('El cliente no tiene email registrado', { variant: 'warning' });
+  openSnackbar({ open: true, message: 'El cliente no tiene email registrado', variant: 'alert', alert: { color: 'warning' } } as any);
       return;
     }
 
@@ -197,7 +197,7 @@ const CreateQuotation = () => {
       // Primero crear la cotización usando la API
       const createResult = await createQuotation(values);
       if (!createResult.success) {
-        enqueueSnackbar(createResult.error || 'Error al crear la cotización', { variant: 'error' });
+  openSnackbar({ open: true, message: createResult.error || 'Error al crear la cotización', variant: 'alert', alert: { color: 'error' } } as any);
         return;
       }
       
@@ -212,13 +212,13 @@ const CreateQuotation = () => {
           message: `Estimado/a ${selectedCustomer.Name},\n\nEsperamos que se encuentre bien. Adjunto encontrará la cotización #${created.NumberQuotation} solicitada.\n\nQuedamos a la espera de sus comentarios.\n\nSaludos cordiales.`
         });
         
-        enqueueSnackbar('Cotización creada y enviada por correo exitosamente', { variant: 'success' });
+  openSnackbar({ open: true, message: 'Cotización creada y enviada por correo exitosamente', variant: 'alert', alert: { color: 'success' } } as any);
         navigate(`/quotations/edit/${created.Id}`);
       } else {
-        enqueueSnackbar('Error al crear la cotización', { variant: 'error' });
+  openSnackbar({ open: true, message: 'Error al crear la cotización', variant: 'alert', alert: { color: 'error' } } as any);
       }
     } catch (error: any) {
-      enqueueSnackbar(error?.message || 'Error al crear y enviar la cotización', { variant: 'error' });
+  openSnackbar({ open: true, message: error?.message || 'Error al crear y enviar la cotización', variant: 'alert', alert: { color: 'error' } } as any);
     } finally {
       setCreatingAndSending(false);
     }

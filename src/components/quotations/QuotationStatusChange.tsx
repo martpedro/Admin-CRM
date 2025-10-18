@@ -9,7 +9,8 @@ import {
 } from '@mui/material';
 import { Clock, TickCircle, ArrowDown2 } from 'iconsax-react';
 import { useQuotationOperations } from 'hooks/useQuotations';
-import { enqueueSnackbar } from 'notistack';
+import { openSnackbar } from 'api/snackbar';
+import { SnackbarProps } from 'types/snackbar';
 
 interface QuotationStatusChangeProps {
   quotationId: number;
@@ -45,14 +46,14 @@ const QuotationStatusChange = ({ quotationId, currentStatus, onStatusChanged }: 
       
       const result = await updateQuotationStatus(quotationId, newStatus);
       if (result.success) {
-        enqueueSnackbar(`Estado cambiado a: ${newStatus}`, { variant: 'success' });
+        openSnackbar({ open: true, message: `Estado cambiado a: ${newStatus}`, variant: 'alert', alert: { color: 'success' } } as SnackbarProps);
       } else {
         // Si falla, revertir el estado
-        enqueueSnackbar('Error al cambiar el estado', { variant: 'error' });
+        openSnackbar({ open: true, message: 'Error al cambiar el estado', variant: 'alert', alert: { color: 'error' } } as SnackbarProps);
         onStatusChanged?.(currentStatus); // Revertir
       }
     } catch (error) {
-      enqueueSnackbar('Error al cambiar el estado', { variant: 'error' });
+      openSnackbar({ open: true, message: 'Error al cambiar el estado', variant: 'alert', alert: { color: 'error' } } as SnackbarProps);
       // Si falla, revertir el estado
       onStatusChanged?.(currentStatus); // Revertir
     } finally {

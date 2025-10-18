@@ -29,7 +29,7 @@ import {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FormattedMessage, useIntl } from 'react-intl';
-import { enqueueSnackbar } from 'notistack';
+import { openSnackbar } from 'api/snackbar';
 import { mutate } from 'swr';
 
 // project-imports
@@ -50,6 +50,7 @@ import { useQuotationDataScope } from 'hooks/useDataScope';
 
 // types
 import { Quotation } from 'api/quotations';
+import { SnackbarProps } from 'types/snackbar';
 
 // types for status
 type StatusKey = 'todas' | 'Nueva' | 'En proceso' | 'Cerrada';
@@ -93,10 +94,10 @@ const QuotationsList = () => {
       mutate('quotation:list:Nueva');
       mutate('quotation:list:En proceso');
       mutate('quotation:list:Cerrada');
-      enqueueSnackbar('Estado actualizado correctamente', { variant: 'success' });
+  openSnackbar({ open: true, message: 'Estado actualizado correctamente', variant: 'alert', alert: { color: 'success' } } as SnackbarProps);
     } catch (error) {
       console.error('Error updating status:', error);
-      enqueueSnackbar('Error al actualizar el estado', { variant: 'error' });
+  openSnackbar({ open: true, message: 'Error al actualizar el estado', variant: 'alert', alert: { color: 'error' } } as SnackbarProps);
     } finally {
       setStatusChangeLoading(null);
     }
@@ -117,9 +118,9 @@ const QuotationsList = () => {
     if (result.success) {
       setDeleteDialogOpen(false);
       setQuotationToDelete(null);
-      enqueueSnackbar('Cotización eliminada correctamente', { variant: 'success' });
+  openSnackbar({ open: true, message: 'Cotización eliminada correctamente', variant: 'alert', alert: { color: 'success' } } as SnackbarProps);
     } else {
-      enqueueSnackbar(result.error || 'Error al eliminar la cotización', { variant: 'error' });
+  openSnackbar({ open: true, message: result.error || 'Error al eliminar la cotización', variant: 'alert', alert: { color: 'error' } } as SnackbarProps);
     }
   };
 
@@ -464,9 +465,9 @@ const QuotationsList = () => {
                             mutate('quotation:list:En proceso');
                             mutate('quotation:list:Cerrada');
                             
-                            enqueueSnackbar('Correo enviado correctamente', { variant: 'success' });
+                            openSnackbar({ open: true, message: 'Correo enviado correctamente', variant: 'alert', alert: { color: 'success' } } as SnackbarProps);
                           } catch (err: any) {
-                            enqueueSnackbar('Error al enviar el correo', { variant: 'error' });
+                            openSnackbar({ open: true, message: 'Error al enviar el correo', variant: 'alert', alert: { color: 'error' } } as SnackbarProps);
                           } finally {
                             setSendingEmail(false);
                           }
