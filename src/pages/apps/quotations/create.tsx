@@ -57,7 +57,9 @@ import quotationsApi, { sendQuotationEmail } from 'api/quotations';
 import JWTContext from 'contexts/JWTContext';
 
 // assets
-import { Add, Trash, SearchNormal1, DocumentUpload } from 'iconsax-react';
+import { Add, Trash, SearchNormal1, DocumentUpload, Copy } from 'iconsax-react';
+import Tooltip from '@mui/material/Tooltip';
+import { duplicateProductLine } from 'utils/duplicateProduct';
 import Autocomplete from '@mui/material/Autocomplete';
 import ProductAddDialog, { ProductWithOrigin } from 'components/quotations/ProductAddDialog';
 import { getAddressesByCustomer } from 'api/customer';
@@ -102,18 +104,20 @@ const CreateQuotation = () => {
         const list = await quotationsApi.getAdvisors();
         if (!active) return;
         // El endpoint ya devuelve estructura mapUser; asegurar tipado mínimo
-        const mapped = Array.isArray(list) ? list.map((u: any) => ({
-          Id: u.Id,
-            name: u.name || u.Name || '',
-            LastName: u.LastName || '',
-            MotherLastName: u.MotherLastName || '',
-            email: u.email || u.Email || '',
-            isActive: u.isActive !== false,
-            profile: u.profile || '',
-            Phone: u.Phone || '',
-            LetterAsign: u.LetterAsign || '',
-            password: u.password || ''
-        })) : [];
+        const mapped = Array.isArray(list)
+          ? list.map((u: any) => ({
+              Id: u.Id,
+              name: u.name || u.Name || '',
+              LastName: u.LastName || '',
+              MotherLastName: u.MotherLastName || '',
+              email: u.email || u.Email || '',
+              isActive: u.isActive !== false,
+              profile: u.profile || '',
+              Phone: u.Phone || '',
+              LetterAsign: u.LetterAsign || '',
+              password: u.password || ''
+            }))
+          : [];
         setAdvisors(mapped);
       } catch (e: any) {
         if (!active) return;
@@ -123,7 +127,9 @@ const CreateQuotation = () => {
       }
     };
     load();
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
   const { companies } = useCompanies();
   const { getCompanyById } = useCompanyOperations();
@@ -169,7 +175,7 @@ const CreateQuotation = () => {
       const result = await createQuotation(values);
       if (result.success) {
         const created = result.data;
-  openSnackbar({ open: true, message: 'Cotización creada exitosamente', variant: 'alert', alert: { color: 'success' } } as any);
+        openSnackbar({ open: true, message: 'Cotización creada exitosamente', variant: 'alert', alert: { color: 'success' } } as any);
         // Redirigir a la pantalla de edición con el Id devuelto
         if (created && created.Id) {
           navigate(`/quotations/edit/${created.Id}`);
@@ -178,17 +184,27 @@ const CreateQuotation = () => {
           navigate('/quotations');
         }
       } else {
-  openSnackbar({ open: true, message: result.error || 'Error al crear la cotización', variant: 'alert', alert: { color: 'error' } } as any);
+        openSnackbar({
+          open: true,
+          message: result.error || 'Error al crear la cotización',
+          variant: 'alert',
+          alert: { color: 'error' }
+        } as any);
       }
     } catch (error: any) {
-  openSnackbar({ open: true, message: error?.message || 'Error inesperado al crear la cotización', variant: 'alert', alert: { color: 'error' } } as any);
+      openSnackbar({
+        open: true,
+        message: error?.message || 'Error inesperado al crear la cotización',
+        variant: 'alert',
+        alert: { color: 'error' }
+      } as any);
     }
   };
 
   const handleCreateAndSendEmail = async (values: QuotationCreate) => {
     const selectedCustomer = customers.find((c: any) => c.Id === values.CustomerId);
     if (!selectedCustomer?.Email) {
-  openSnackbar({ open: true, message: 'El cliente no tiene email registrado', variant: 'alert', alert: { color: 'warning' } } as any);
+      openSnackbar({ open: true, message: 'El cliente no tiene email registrado', variant: 'alert', alert: { color: 'warning' } } as any);
       return;
     }
 
@@ -197,12 +213,17 @@ const CreateQuotation = () => {
       // Primero crear la cotización usando la API
       const createResult = await createQuotation(values);
       if (!createResult.success) {
-  openSnackbar({ open: true, message: createResult.error || 'Error al crear la cotización', variant: 'alert', alert: { color: 'error' } } as any);
+        openSnackbar({
+          open: true,
+          message: createResult.error || 'Error al crear la cotización',
+          variant: 'alert',
+          alert: { color: 'error' }
+        } as any);
         return;
       }
-      
+
       const created = createResult.data;
-      
+
       // Luego enviar por correo si se creó exitosamente
       if (created && created.Id) {
         await sendQuotationEmail({
@@ -211,14 +232,24 @@ const CreateQuotation = () => {
           cc: '',
           message: `Estimado/a ${selectedCustomer.Name},\n\nEsperamos que se encuentre bien. Adjunto encontrará la cotización #${created.NumberQuotation} solicitada.\n\nQuedamos a la espera de sus comentarios.\n\nSaludos cordiales.`
         });
-        
-  openSnackbar({ open: true, message: 'Cotización creada y enviada por correo exitosamente', variant: 'alert', alert: { color: 'success' } } as any);
+
+        openSnackbar({
+          open: true,
+          message: 'Cotización creada y enviada por correo exitosamente',
+          variant: 'alert',
+          alert: { color: 'success' }
+        } as any);
         navigate(`/quotations/edit/${created.Id}`);
       } else {
-  openSnackbar({ open: true, message: 'Error al crear la cotización', variant: 'alert', alert: { color: 'error' } } as any);
+        openSnackbar({ open: true, message: 'Error al crear la cotización', variant: 'alert', alert: { color: 'error' } } as any);
       }
     } catch (error: any) {
-  openSnackbar({ open: true, message: error?.message || 'Error al crear y enviar la cotización', variant: 'alert', alert: { color: 'error' } } as any);
+      openSnackbar({
+        open: true,
+        message: error?.message || 'Error al crear y enviar la cotización',
+        variant: 'alert',
+        alert: { color: 'error' }
+      } as any);
     } finally {
       setCreatingAndSending(false);
     }
@@ -231,7 +262,7 @@ const CreateQuotation = () => {
     <>
       <Breadcrumbs title />
 
-  <Formik enableReinitialize initialValues={initialValues} validationSchema={validationSchema} onSubmit={handleSubmit}>
+      <Formik enableReinitialize initialValues={initialValues} validationSchema={validationSchema} onSubmit={handleSubmit}>
         {({ values, errors, touched, handleChange, handleBlur, setFieldValue }) => (
           <Form>
             <Grid container spacing={3}>
@@ -375,17 +406,24 @@ const CreateQuotation = () => {
                       />
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        name="TimeValidation"
-                        label="Validez"
-                        value={values.TimeValidation}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={Boolean(touched.TimeValidation && errors.TimeValidation)}
-                        helperText={touched.TimeValidation && (errors.TimeValidation as any)}
-                      />
+                      <FormControl fullWidth size="small" error={Boolean(touched.TimeValidation && errors.TimeValidation)}>
+                        <InputLabel>Validez</InputLabel>
+                        <Select
+                          name="TimeValidation"
+                          value={values.TimeValidation || '7 días'}
+                          label="Validez"
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                        >
+                          <MenuItem value="7 días">7 días</MenuItem>
+                          <MenuItem value="15 días">15 días</MenuItem>
+                          <MenuItem value="20 días">20 días</MenuItem>
+                          <MenuItem value="30 días">30 días</MenuItem>
+                        </Select>
+                        {touched.TimeValidation && errors.TimeValidation && (
+                          <FormHelperText>{String(errors.TimeValidation)}</FormHelperText>
+                        )}
+                      </FormControl>
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
                       <TextField
@@ -508,7 +546,7 @@ const CreateQuotation = () => {
                         <Select name="UserId" value={values.UserId} onChange={handleChange} onBlur={handleBlur}>
                           <MenuItem value={0}>Seleccionar asesor</MenuItem>
                           {/* Opción temporal para evitar el warning de MUI cuando el valor actual (usuario logueado) aún no está en la lista cargada */}
-                          {!loadingAdvisors && !advisorsError && values.UserId !== 0 && !advisors.some(a => a.Id === values.UserId) && (
+                          {!loadingAdvisors && !advisorsError && values.UserId !== 0 && !advisors.some((a) => a.Id === values.UserId) && (
                             <MenuItem value={values.UserId} disabled>
                               {(auth?.user as any)?.name || 'Usuario actual'} (cargando permisos)
                             </MenuItem>
@@ -529,42 +567,63 @@ const CreateQuotation = () => {
                     </Grid>
 
                     <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        name="AdvancePayment"
-                        label="Anticipo"
-                        value={values.AdvancePayment}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={Boolean(touched.AdvancePayment && errors.AdvancePayment)}
-                        helperText={touched.AdvancePayment && errors.AdvancePayment}
-                      />
+                      <FormControl fullWidth size="small" error={Boolean(touched.AdvancePayment && errors.AdvancePayment)}>
+                        <InputLabel>Anticipo</InputLabel>
+                        <Select
+                          name="AdvancePayment"
+                          value={values.AdvancePayment || '60%'}
+                          label="Anticipo"
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                        >
+                          <MenuItem value="60%">60%</MenuItem>
+                          <MenuItem value="50%">50%</MenuItem>
+                        </Select>
+                        {touched.AdvancePayment && errors.AdvancePayment && (
+                          <FormHelperText>{String(errors.AdvancePayment)}</FormHelperText>
+                        )}
+                      </FormControl>
                     </Grid>
 
                     <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        name="LiquidationPayment"
-                        label="Liquidación"
-                        value={values.LiquidationPayment}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={Boolean(touched.LiquidationPayment && errors.LiquidationPayment)}
-                        helperText={touched.LiquidationPayment && errors.LiquidationPayment}
-                      />
+                       <FormControl fullWidth size="small" error={Boolean(touched.LiquidationPayment && errors.LiquidationPayment)}>
+                        <InputLabel>Liquidación</InputLabel>
+                        <Select
+                          name="LiquidationPayment"
+                          value={values.LiquidationPayment || '40%'}
+                          label="Liquidación"
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                        >
+                          <MenuItem value="40%">40%</MenuItem>
+                          <MenuItem value="50%">50%</MenuItem>
+                        </Select>
+                        {touched.LiquidationPayment && errors.LiquidationPayment && (
+                          <FormHelperText>{String(errors.LiquidationPayment)}</FormHelperText>
+                        )}
+                      </FormControl>
                     </Grid>
 
                     <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
+                      <FormControl fullWidth size="small" error={Boolean(touched.TimeCredit && errors.TimeCredit)}>
+                      <InputLabel>Tiempo de Crédito</InputLabel>
+                      <Select
                         name="TimeCredit"
+                        value={values.TimeCredit || '0 días'}
                         label="Tiempo de Crédito"
-                        value={values.TimeCredit}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        error={Boolean(touched.TimeCredit && errors.TimeCredit)}
-                        helperText={touched.TimeCredit && errors.TimeCredit}
-                      />
+                      >
+                        <MenuItem value="0 días">0 días</MenuItem>
+                        <MenuItem value="7 días">7 días</MenuItem>
+                        <MenuItem value="15 días">15 días</MenuItem>
+                        <MenuItem value="20 días">20 días</MenuItem>
+                        <MenuItem value="30 días">30 días</MenuItem>
+                        <MenuItem value="45 días">45 días</MenuItem>
+                        <MenuItem value="60 días">60 días</MenuItem>
+                      </Select>
+                      {touched.TimeCredit && errors.TimeCredit && <FormHelperText>{String(errors.TimeCredit)}</FormHelperText>}
+                      </FormControl>
                     </Grid>
 
                     {/* Campo de Validez movido arriba, debajo de Empresa */}
@@ -624,7 +683,11 @@ const CreateQuotation = () => {
                                     <Avatar src={product.Image} alt={product.Code} sx={{ width: 50, height: 50 }} variant="rounded">
                                       {product.Code?.charAt(0) || 'P'}
                                     </Avatar>
-                                    <Chip size="small" label={product.Origin === 'catalog' ? 'Catálogo' : 'Manual'} color={product.Origin === 'catalog' ? 'primary' : 'default'} />
+                                    <Chip
+                                      size="small"
+                                      label={product.Origin === 'catalog' ? 'Catálogo' : 'Manual'}
+                                      color={product.Origin === 'catalog' ? 'primary' : 'default'}
+                                    />
                                   </Box>
                                 </TableCell>
                                 <TableCell>
@@ -659,10 +722,10 @@ const CreateQuotation = () => {
                                         />
                                       }
                                       label="Utilidad extra"
-                                      sx={{ 
+                                      sx={{
                                         fontSize: '0.75rem',
-                                        '& .MuiFormControlLabel-label': { 
-                                          fontSize: '0.75rem' 
+                                        '& .MuiFormControlLabel-label': {
+                                          fontSize: '0.75rem'
                                         }
                                       }}
                                     />
@@ -735,7 +798,7 @@ const CreateQuotation = () => {
                                       setFieldValue('Total', totals.Total);
                                     }}
                                     inputProps={{ min: 1 }}
-                                    sx={{ width: 80 }}
+                                    sx={{ width: 100 }}
                                   />
                                 </TableCell>
                                 <TableCell>
@@ -760,7 +823,6 @@ const CreateQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 0, step: 1 }}
                                     sx={{ width: 100 }}
                                   />
                                 </TableCell>
@@ -786,7 +848,6 @@ const CreateQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 0, step: 1 }}
                                     sx={{ width: 100 }}
                                   />
                                 </TableCell>
@@ -813,8 +874,7 @@ const CreateQuotation = () => {
                                       setFieldValue('Total', totals.Total);
                                     }}
                                     placeholder="30"
-                                    inputProps={{ min: 0, step: 1 }}
-                                    sx={{ width: 80 }}
+                                    sx={{ width: 110 }}
                                     InputProps={{
                                       endAdornment: '%'
                                     }}
@@ -841,7 +901,27 @@ const CreateQuotation = () => {
                                     {formatCurrencyMXN(product.Revenue || 0)}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="center">
+                                <TableCell align="center" sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                  <Tooltip title="Duplicar línea">
+                                    <IconButton
+                                      color="primary"
+                                      onClick={() => {
+                                        const dup = duplicateProductLine(product);
+                                        if (!dup) return;
+                                        const pCalc = calculateProductTotal(dup as any);
+                                        push(pCalc as any);
+                                        // Recalculate totals
+                                        const updatedProducts = [...values.products, pCalc as any];
+                                        const totals = calculateTotals(updatedProducts as any);
+                                        setFieldValue('SubTotal', totals.SubTotal);
+                                        setFieldValue('Tax', totals.Tax);
+                                        setFieldValue('Total', totals.Total);
+                                      }}
+                                    >
+                                      <Copy />
+                                    </IconButton>
+                                  </Tooltip>
+
                                   <IconButton
                                     color="error"
                                     onClick={() => {
@@ -896,7 +976,6 @@ const CreateQuotation = () => {
                           </Typography>
                         </Box>
                         {/* Métricas adicionales */}
-                        
                       </Stack>
                     </Box>
                   </Box>
@@ -912,8 +991,8 @@ const CreateQuotation = () => {
                   <Button type="submit" variant="contained">
                     Crear Cotización
                   </Button>
-                  <Button 
-                    variant="contained" 
+                  <Button
+                    variant="contained"
                     color="secondary"
                     disabled={creatingAndSending || !customers.find((c: any) => c.Id === values.CustomerId)?.Email}
                     onClick={() => handleCreateAndSendEmail(values)}

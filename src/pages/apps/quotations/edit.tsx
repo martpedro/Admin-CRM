@@ -30,7 +30,9 @@ import {
   CircularProgress
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
-import { Add, Trash } from 'iconsax-react';
+import { Add, Trash, Copy } from 'iconsax-react';
+import Tooltip from '@mui/material/Tooltip';
+import { duplicateProductLine } from 'utils/duplicateProduct';
 import ProductAddDialog, { ProductWithOrigin } from 'components/quotations/ProductAddDialog';
 import Breadcrumbs from 'components/@extended/Breadcrumbs';
 import MainCard from 'components/MainCard';
@@ -269,9 +271,7 @@ const EditQuotation = () => {
                         </Select>
                         {touched.CompanyId && errors.CompanyId && <FormHelperText>{String(errors.CompanyId)}</FormHelperText>}
                       </FormControl>
-                      <Button variant="outlined" color="secondary" onClick={() => setOpenSendEmail(true)}>
-                        Enviar por correo
-                      </Button>
+                     
                     </Grid>
                     {selectedCompany && (
                       <Grid size={{ xs: 12, md: 6 }}>
@@ -385,17 +385,24 @@ const EditQuotation = () => {
                       />
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        name="TimeValidation"
-                        label="Validez"
-                        value={values.TimeValidation}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={Boolean(touched.TimeValidation && errors.TimeValidation)}
-                        helperText={touched.TimeValidation && (errors.TimeValidation as any)}
-                      />
+                      <FormControl fullWidth size="small" error={Boolean(touched.TimeValidation && errors.TimeValidation)}>
+                        <InputLabel>Validez</InputLabel>
+                        <Select
+                          name="TimeValidation"
+                          value={values.TimeValidation || '7 días'}
+                          label="Validez"
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                        >
+                          <MenuItem value="7 días">7 días</MenuItem>
+                          <MenuItem value="15 días">15 días</MenuItem>
+                          <MenuItem value="20 días">20 días</MenuItem>
+                          <MenuItem value="30 días">30 días</MenuItem>
+                        </Select>
+                        {touched.TimeValidation && errors.TimeValidation && (
+                          <FormHelperText>{String(errors.TimeValidation)}</FormHelperText>
+                        )}
+                      </FormControl>
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
                       <TextField
@@ -527,40 +534,61 @@ const EditQuotation = () => {
                       </FormControl>
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        name="AdvancePayment"
-                        label="Anticipo"
-                        value={values.AdvancePayment}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={Boolean(touched.AdvancePayment && errors.AdvancePayment)}
-                        helperText={touched.AdvancePayment && errors.AdvancePayment}
-                      />
+                      <FormControl fullWidth size="small" error={Boolean(touched.AdvancePayment && errors.AdvancePayment)}>
+                        <InputLabel>Anticipo</InputLabel>
+                        <Select
+                          name="AdvancePayment"
+                          value={values.AdvancePayment || '60%'}
+                          label="Anticipo"
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                        >
+                          <MenuItem value="60%">60%</MenuItem>
+                          <MenuItem value="50%">50%</MenuItem>
+                        </Select>
+                        {touched.AdvancePayment && errors.AdvancePayment && (
+                          <FormHelperText>{String(errors.AdvancePayment)}</FormHelperText>
+                        )}
+                      </FormControl>
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
-                        name="LiquidationPayment"
-                        label="Liquidación"
-                        value={values.LiquidationPayment}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        error={Boolean(touched.LiquidationPayment && errors.LiquidationPayment)}
-                        helperText={touched.LiquidationPayment && errors.LiquidationPayment}
-                      />
+                      <FormControl fullWidth size="small" error={Boolean(touched.LiquidationPayment && errors.LiquidationPayment)}>
+                        <InputLabel>Liquidación</InputLabel>
+                        <Select
+                          name="LiquidationPayment"
+                          value={values.LiquidationPayment || '40%'}
+                          label="Liquidación"
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                        >
+                          <MenuItem value="40%">40%</MenuItem>
+                          <MenuItem value="50%">50%</MenuItem>
+                        </Select>
+                        {touched.LiquidationPayment && errors.LiquidationPayment && (
+                          <FormHelperText>{String(errors.LiquidationPayment)}</FormHelperText>
+                        )}
+                      </FormControl>
                     </Grid>
                     <Grid size={{ xs: 12, md: 6 }}>
-                      <TextField
-                        fullWidth
+                      <FormControl fullWidth size="small" error={Boolean(touched.TimeCredit && errors.TimeCredit)}>
+                      <InputLabel>Tiempo de Crédito</InputLabel>
+                      <Select
                         name="TimeCredit"
+                        value={values.TimeCredit || '0 días'}
                         label="Tiempo de Crédito"
-                        value={values.TimeCredit}
                         onChange={handleChange}
                         onBlur={handleBlur}
-                        error={Boolean(touched.TimeCredit && errors.TimeCredit)}
-                        helperText={touched.TimeCredit && errors.TimeCredit}
-                      />
+                      >
+                        <MenuItem value="0 días">0 días</MenuItem>
+                        <MenuItem value="7 días">7 días</MenuItem>
+                        <MenuItem value="15 días">15 días</MenuItem>
+                        <MenuItem value="20 días">20 días</MenuItem>
+                        <MenuItem value="30 días">30 días</MenuItem>
+                        <MenuItem value="45 días">45 días</MenuItem>
+                        <MenuItem value="60 días">60 días</MenuItem>
+                      </Select>
+                      {touched.TimeCredit && errors.TimeCredit && <FormHelperText>{String(errors.TimeCredit)}</FormHelperText>}
+                      </FormControl>
                     </Grid>
                   </Grid>
                 </MainCard>
@@ -730,8 +758,7 @@ const EditQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 1 }}
-                                    sx={{ width: 80 }}
+                                    sx={{ width: 100 }}
                                   />
                                 </TableCell>
                                 <TableCell>
@@ -754,7 +781,6 @@ const EditQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 0, step: 1 }}
                                     sx={{ width: 100 }}
                                   />
                                 </TableCell>
@@ -778,7 +804,6 @@ const EditQuotation = () => {
                                       setFieldValue('Tax', totals.Tax);
                                       setFieldValue('Total', totals.Total);
                                     }}
-                                    inputProps={{ min: 0, step: 1 }}
                                     sx={{ width: 100 }}
                                   />
                                 </TableCell>
@@ -803,8 +828,7 @@ const EditQuotation = () => {
                                       setFieldValue('Total', totals.Total);
                                     }}
                                     placeholder="30"
-                                    inputProps={{ min: 0, step: 1 }}
-                                    sx={{ width: 80 }}
+                                    sx={{ width: 110 }}
                                     InputProps={{
                                       endAdornment: '%'
                                     }}
@@ -831,7 +855,26 @@ const EditQuotation = () => {
                                     {formatCurrencyMXN(product.Revenue || 0)}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="center">
+                                <TableCell align="center" sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                  <Tooltip title="Duplicar línea">
+                                    <IconButton
+                                      color="primary"
+                                      onClick={() => {
+                                        const dup = duplicateProductLine(product);
+                                        if (!dup) return;
+                                        const pCalc = calculateProductTotal(dup as any);
+                                        const updatedProducts = [...values.products, pCalc as any];
+                                        setFieldValue('products', updatedProducts as any);
+                                        const totals = calculateTotals(updatedProducts as any);
+                                        setFieldValue('SubTotal', totals.SubTotal);
+                                        setFieldValue('Tax', totals.Tax);
+                                        setFieldValue('Total', totals.Total);
+                                      }}
+                                    >
+                                      <Copy />
+                                    </IconButton>
+                                  </Tooltip>
+
                                   <IconButton
                                     color="error"
                                     onClick={() => {

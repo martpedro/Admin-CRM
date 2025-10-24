@@ -112,10 +112,10 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
     }
     let imageUrl = manualProduct.Image;
     if (productSearchMode === 1) {
-      if (!manualProduct.Code || !manualProduct.Description || manualProduct.UnitPrice <= 0) {
+      if (!manualProduct.Code || !manualProduct.Description || manualProduct.VendorCost <= 0) {
         openSnackbar({
           open: true,
-          message: 'Complete Código, Descripción y Precio Unitario',
+          message: 'Complete Código, Descripción y Precio de Proveedor',
           variant: 'alert',
           alert: { color: 'warning', variant: 'filled' },
           anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
@@ -360,7 +360,6 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
                 <TextField label="Cantidad" type="number" fullWidth value={manualProduct.Quantity} onChange={(e) => setManualProduct(p => ({ ...p, Quantity: parseInt(e.target.value) || 1 }))} />
                 <TextField label="Costo Prov." type="number" fullWidth value={manualProduct.VendorCost} onChange={(e) => setManualProduct(p => ({ ...p, VendorCost: parseFloat(e.target.value) || 0 }))} />
                 <TextField label="Costo Impresión" type="number" fullWidth value={manualProduct.PrintCost} onChange={(e) => setManualProduct(p => ({ ...p, PrintCost: parseFloat(e.target.value) || 0 }))} />
-                <TextField label="Precio Unitario *" type="number" fullWidth value={manualProduct.UnitPrice} onChange={(e) => setManualProduct(p => ({ ...p, UnitPrice: parseFloat(e.target.value) || 0 }))} />
               </Stack>
             </Box>
           </Box>

@@ -26,7 +26,7 @@ const globalSearchApi = {
   // Búsqueda global en cotizaciones y clientes
   search: async (query: string, limit: number = 10): Promise<GlobalSearchResponse> => {
     const response = await axiosServices.get(`/api/Quotation/GlobalSearch?q=${encodeURIComponent(query)}&limit=${limit}`);
-    return response.data;
+    return response.data.Message || { quotations: [], customers: [] };
   }
 };
 

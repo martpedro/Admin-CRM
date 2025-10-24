@@ -53,6 +53,7 @@ export default function Search() {
       try {
         setLoading(true);
         const searchResults = await globalSearchApi.search(searchQuery, 8);
+        console.log('Resultados de búsqueda:', searchResults);
         setResults(searchResults);
       } catch (error) {
         console.error('Error en búsqueda global:', error);
