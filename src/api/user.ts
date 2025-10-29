@@ -171,7 +171,7 @@ export async function updateUser(UserId: number, updatedUser: UserList, avatarFi
   const letterAsign = (updatedUser as any).letterasigned || (updatedUser as any).LetterAsign || '';
   const isActive = !((updatedUser as any).isInactive === true);
   const profile = (updatedUser as any).profile || 1;
-  const password = (updatedUser as any).password || (updatedUser as any)['password'] || '123456';
+  const password = (updatedUser as any).password || (updatedUser as any)['password'] || '';
 
   // Log para depuración
   console.log('Datos mapeados para updateUser:', {
