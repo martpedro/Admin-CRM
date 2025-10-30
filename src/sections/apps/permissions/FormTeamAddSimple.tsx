@@ -1,6 +1,5 @@
-// Simple test component
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, Typography } from '@mui/material';
+import TeamCreateForm from '../../../pages/TeamCreateForm';
 
 interface Props {
   team?: any;
@@ -8,16 +7,8 @@ interface Props {
 }
 
 const FormTeamAdd: React.FC<Props> = ({ team, closeModal }) => {
-  return (
-    <div>
-      <DialogTitle>
-        {team ? 'Editar Equipo' : 'Crear Equipo'}
-      </DialogTitle>
-      <DialogContent>
-        <Typography>Formulario de equipos temporalmente deshabilitado</Typography>
-      </DialogContent>
-    </div>
-  );
+  // Si hay un equipo, pasar los datos al formulario para edición
+  return <TeamCreateForm team={team} closeModal={closeModal} />;
 };
 
 export default FormTeamAdd;

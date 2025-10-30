@@ -1,3 +1,22 @@
+// Obtención simple de usuarios activos
+export async function getActiveUsers() {
+  try {
+    const response = await axiosServices.get('/api/user/active', {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    // Si la respuesta es un array directo
+    // if (Array.isArray(response.data)) return response.data;
+    // Si la respuesta viene en Message[0]
+    
+    if (response.data?.Message && Array.isArray(response.data.Message)) return response.data.Message;
+    return [];
+  } catch {
+    return [];
+  }
+}
 import { useMemo } from 'react';
 
 // third-party
@@ -35,7 +54,7 @@ export function useGetUser() {
     return response.data;
   };
 
-  const { data, isLoading, error, isValidating } = useSWR(endpoints.key + endpoints.list, userFetcher, {
+  const { data, isLoading, error, isValidating } = useSWR(endpoints.key + '/active', userFetcher, {
     revalidateIfStale: false,
     revalidateOnFocus: false,
     revalidateOnReconnect: false,

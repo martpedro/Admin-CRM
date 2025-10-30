@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useEffect } from 'react';
 
 // material-ui
 import { alpha } from '@mui/material/styles';
@@ -46,7 +47,8 @@ import EmptyReactTable from 'components/EmptyReactTable';
 import TeamModal from '../../../sections/apps/permissions/TeamModal';
 import AlertTeamDelete from '../../../sections/apps/permissions/AlertTeamDelete';
 
-import { useGetTeams } from 'api/permissions';
+import { useGetTeams } from 'api/teams';
+import teamApi from 'api/teams';
 
 // types
 import { Team } from 'types/permission';
@@ -182,7 +184,16 @@ function ReactTable({ data, columns, modalToggler }: Props) {
 // ==============================|| TEAM LIST PAGE ||============================== //
 
 export default function TeamListPage() {
-  const { teams, teamsLoading } = useGetTeams();
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamsLoading, setTeamsLoading] = useState<boolean>(true);
+  useEffect(() => {
+    setTeamsLoading(true);
+    teamApi.getAll().then((result: Team[]) => {
+      setTeams(result);
+      setTeamsLoading(false);
+      console.log('Resultado directo teamApi.getAll:', result);
+    });
+  }, []);
   const [teamModal, setTeamModal] = useState<boolean>(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [teamDeleteId, setTeamDeleteId] = useState<number>(0);
@@ -332,7 +343,7 @@ export default function TeamListPage() {
   );
 
   if (teamsLoading) return <EmptyReactTable />;
-
+console.log('Teams data:', teams);
   return (
     <>
       <ReactTable

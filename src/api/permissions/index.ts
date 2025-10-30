@@ -45,8 +45,8 @@ const endpoints = {
 };
 
 const teamEndpoints = {
-  key: 'api/teams',
-  list: '/all',
+  key: 'api/Team',
+  list: '',
   create: '/create',
   update: '/update',
   delete: '/delete',

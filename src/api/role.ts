@@ -32,7 +32,7 @@ const mapRole = (r: any): RoleItem => ({
   permissions: Array.isArray(r.Permissions)
     ? r.Permissions.map((p: any) => ({ id: p.Id, name: p.Name, key: p.Key || p.key }))
     : undefined
-});
+}); 
 
 const roleApi = {
   getAll: async (withPermissions = false): Promise<RoleItem[]> => {
@@ -54,7 +54,7 @@ const roleApi = {
       const response = await axiosServices.get(`${ROLE_API}/${id}`);
       const item = response.data?.Message || {};
       openSnackbar({ ...defaultSnackbar, message: 'Rol obtenido correctamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
-      return mapRole(item);
+      return { ...mapRole(item), permissions: item.permissions || [] };
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message || 'Error al obtener rol';
       openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });

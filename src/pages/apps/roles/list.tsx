@@ -29,6 +29,7 @@ export default function RoleListPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<RoleItem | null>(null);
+  const [pendingId, setPendingId] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -66,7 +67,15 @@ export default function RoleListPage() {
       header: 'Acciones',
       cell: ({ row }) => (
         <Stack direction="row" sx={{ gap: 1 }}>
-          <Tooltip title="Editar"><IconButton onClick={() => { setEditing(row.original); setOpen(true); }}><Edit /></IconButton></Tooltip>
+          <Tooltip title="Editar"><IconButton onClick={async () => {
+            // Si el rol no tiene permisos, obtener por id
+            if (!row.original.permissions || row.original.permissions.length === 0) {
+              setPendingId(row.original.id);
+            } else {
+              setEditing(row.original);
+              setOpen(true);
+            }
+          }}><Edit /></IconButton></Tooltip>
           <Tooltip title="Eliminar"><IconButton color="error" onClick={async () => {
             const ok = window.confirm('¿Eliminar rol?');
             if (!ok) return;
@@ -77,6 +86,18 @@ export default function RoleListPage() {
       )
     }
   ], []);
+  // Efecto para obtener el rol por id si es necesario
+  useEffect(() => {
+    if (pendingId) {
+      (async () => {
+        const role = await roleApi.getById(pendingId);
+        console.log('Loaded role for editing:', role);
+        setEditing(role);
+        setOpen(true);
+        setPendingId(null);
+      })();
+    }
+  }, [pendingId]);
 
   const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel() });
 

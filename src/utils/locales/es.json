@@ -341,4 +341,7 @@
   "at-least-1-uppercase": "Al menos 1 letra mayúscula (A-Z)",
   "at-least-1-number": "Al menos 1 número (0-9)",
   "at-least-1-special": "Al menos 1 carácter especial"
+  ,
+  "Equipos": "Equipos",
+  "Roles": "Roles"
 }

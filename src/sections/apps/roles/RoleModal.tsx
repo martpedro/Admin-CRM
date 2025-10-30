@@ -52,9 +52,28 @@ export default function RoleModal({ open, onClose, initial, onSubmit }: { open: 
   useEffect(() => {
     setName(initial?.name || '');
     setIsActive(initial?.isActive ?? true);
-    // Si initial tiene permisos, convertirlos a IDs
-    setSelectedPermissions(initial?.permissions?.map((p: any) => p.id || p.Id) || []);
   }, [initial]);
+
+  // Precarga permisos solo cuando advancedPerms está disponible
+  useEffect(() => {
+    console.log('RoleModal - precargando permisos para rol', initial, open);
+    if (!open || !initial?.id) return;
+    const perms = initial?.permissions;
+    console.log('RoleModal - precargando permisos para rol', initial.id, perms);
+    let ids: number[] = [];
+    if (Array.isArray(perms)) {
+      // Si el array es de números (IDs)
+      if (perms.every((p) => typeof p === 'number')) {
+        ids = perms as number[];
+      } else {
+        // Si el array es de objetos, buscar la propiedad id o Id
+        ids = perms.map((p: any) => p.id ?? p.Id).filter((id: any) => typeof id === 'number');
+      }
+    }
+    // Filtrar solo los IDs que existen en advancedPerms
+    const validIds = advancedPerms.length > 0 ? ids.filter(id => advancedPerms.some(p => p.id === id)) : ids;
+    setSelectedPermissions(validIds);
+  }, [open, initial?.id, advancedPerms]);
 
   // Agrupar permisos por módulo
   const permissionsByModule = useMemo(() => {
@@ -252,16 +271,6 @@ export default function RoleModal({ open, onClose, initial, onSubmit }: { open: 
                                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                                       {module} ({moduleSelectedCount}/{filteredModulePerms.length})
                                     </Typography>
-                                    <Button
-                                      size="small"
-                                      variant="outlined"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleModulePermissions(module);
-                                      }}
-                                    >
-                                      {moduleSelectedCount === filteredModulePerms.length ? 'Deseleccionar' : 'Seleccionar'} módulo
-                                    </Button>
                                   </Stack>
                                 </AccordionSummary>
                                 <AccordionDetails>
@@ -282,6 +291,14 @@ export default function RoleModal({ open, onClose, initial, onSubmit }: { open: 
                                       );
                                     })}
                                   </Stack>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => toggleModulePermissions(module)}
+                                    sx={{ mt: 2 }}
+                                  >
+                                    {moduleSelectedCount === filteredModulePerms.length ? 'Deseleccionar' : 'Seleccionar'} módulo
+                                  </Button>
                                 </AccordionDetails>
                               </Accordion>
                             );

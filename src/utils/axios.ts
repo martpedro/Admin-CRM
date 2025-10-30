@@ -1,7 +1,7 @@
 import axios, { AxiosRequestConfig } from 'axios';
 
 const axiosServices = axios.create({ 
-  baseURL: import.meta.env.VITE_APP_API_URL || 'http://localhost:3003/',
+  baseURL: 'http://localhost:3001/',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -11,6 +11,7 @@ const axiosServices = axios.create({
 
 axiosServices.interceptors.request.use(
   async (config) => {
+    // ...existing code...
     const accessToken = localStorage.getItem('serviceToken');
     if (accessToken) {
       config.headers['Authorization'] = `Bearer ${accessToken}`;
@@ -27,7 +28,10 @@ axiosServices.interceptors.request.use(
 );
 
 axiosServices.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // ...existing code...
+    return response;
+  },
   (error) => {
     if (error.response.status === 401 && !window.location.href.includes('/login')) {
       window.location.pathname = '/maintenance/500';
