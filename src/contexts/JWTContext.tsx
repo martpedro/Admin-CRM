@@ -102,6 +102,7 @@ export const JWTProvider = ({ children }: { children: React.ReactElement }) => {
 
   const login = async (email: string, password: string) => {
     const response = await axios.post('api/Auth/signIn', { email, password });
+  console.log('Axios host:', axios.defaults.baseURL);
     const { Message } = response.data;
     const { serviceToken, user, menus, permissions = [] } = Message;
     setSession(serviceToken);

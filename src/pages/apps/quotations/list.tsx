@@ -39,7 +39,8 @@ import { useQuotations, useQuotationOperations } from 'hooks/useQuotations';
 import QuotationStatusChip from 'components/quotations/QuotationStatusChip';
 
 // assets
-import { Add, Edit, Trash, Eye, SearchNormal1 } from 'iconsax-react';
+import { Add, Edit, Trash, Eye, SearchNormal1, DocumentDownload } from 'iconsax-react';
+import { downloadQuotationExcel } from 'api/quotations';
 import QuotationPdfViewer from 'components/quotations/QuotationPdfViewer';
 import SendQuotationEmailDialog from 'components/quotations/SendQuotationEmailDialog';
 import DeleteQuotationDialog from 'components/quotations/DeleteQuotationDialog';
@@ -372,6 +373,7 @@ const QuotationsList = () => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <QuotationStatusChip status={quotation.Status || 'Nueva'} />
+                        {/* Botón para cambiar estado hacia adelante (Nueva -> En proceso -> Cerrada) */}
                         {quotation.Status !== 'Cerrada' && (
                           <Tooltip title="Cambiar estado">
                             <IconButton 
@@ -393,6 +395,33 @@ const QuotationsList = () => {
                                   <path d="M7 13l3 3 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
                               )}
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {/* Botón para regresar de Cerrada a En proceso */}
+                        {quotation.Status === 'Cerrada' && (
+                          <Tooltip title="Regresar a En proceso">
+                            <IconButton
+                              size="small"
+                              color="warning"
+                              onClick={() => handleStatusChange(quotation.Id, 'En proceso')}
+                              disabled={statusChangeLoading === quotation.Id}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                <path d="M17 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H17v-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {/* Icono para descargar Excel si está Cerrada */}
+                        {quotation.Status === 'Cerrada' && (
+                          <Tooltip title="Descargar Excel">
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => downloadQuotationExcel(quotation.Id)}
+                            >
+                              <DocumentDownload />
                             </IconButton>
                           </Tooltip>
                         )}
@@ -430,6 +459,7 @@ const QuotationsList = () => {
                             </svg>
                           </IconButton>
                         </Tooltip>
+
                         <Tooltip title={intl.formatMessage({ id: 'delete' })}>
                           <IconButton color="error" onClick={() => handleDelete(quotation)}>
                             <Trash />

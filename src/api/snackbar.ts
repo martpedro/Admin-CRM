@@ -12,7 +12,7 @@ const endpoints = {
   key: 'snackbar'
 };
 
-const initialState: SnackbarProps = {
+export const initialState: SnackbarProps = {
   action: false,
   open: false,
   message: 'Note archived',

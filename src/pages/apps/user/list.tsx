@@ -54,7 +54,7 @@ import AlertUserDelete from 'sections/apps/user/AlertUserDelete';
 import UserModal from 'sections/apps/user/UserModal';
 import UserView from 'sections/apps/user/UserView';
 
-import { useGetUser as useGetUser } from 'api/user';
+import { useGetAllUsers as useGetAllUsers } from 'api/user';
 import { ImagePath, getImageUrl } from 'utils/getImageUrl';
 
 // types
@@ -211,8 +211,8 @@ function ReactTable({ data, columns, modalToggler }: Props) {
 // ==============================|| CUSTOMER LIST ||============================== //
 
 export default function UserListPage() {
-  const { usersLoading: loading, users: lists } = useGetUser();
-
+  const { usersLoading: loading, users: lists } = useGetAllUsers();
+console.log('User lists:', lists);
   const [open, setOpen] = useState<boolean>(false);
 
   const [userModal, setUserModal] = useState<boolean>(false);

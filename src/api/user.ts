@@ -63,6 +63,44 @@ export function useGetUser() {
   });
 
   // Usuario de ejemplo solicitado
+  const users = (data?.Message && Array.isArray(data.Message)) ? data.Message : [];
+
+  const memoizedValue = useMemo(
+    () => ({
+      users,
+      usersLoading: isLoading,
+      usersError: error,
+      usersValidating: isValidating,
+      usersEmpty: !isLoading && users.length === 0,
+      totalUsers: users.length
+    }),
+    [users, error, isLoading, isValidating]
+  );
+
+  return memoizedValue;
+}
+
+export function useGetAllUsers() {
+  // Crear un fetcher específico para usuarios con headers forzados
+  const userFetcher = async (url: string) => {
+    const response = await axiosServices.get(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    return response.data;
+  };
+
+  const { data, isLoading, error, isValidating } = useSWR(endpoints.key + '/list', userFetcher, {
+    revalidateIfStale: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    errorRetryCount: 3,
+    errorRetryInterval: 1000
+  });
+
+  // Usuario de ejemplo solicitado
   const users = (data?.Message?.[0] && Array.isArray(data.Message[0])) ? data.Message[0] : [];
 
   const memoizedValue = useMemo(
@@ -79,6 +117,7 @@ export function useGetUser() {
 
   return memoizedValue;
 }
+
 
 // Función específica para obtener usuarios activos como asesores de ventas
 export async function getSalesAdvisors() {

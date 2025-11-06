@@ -1,64 +1,5 @@
-// Enviar cotización por correo
-export const sendQuotationEmail = async ({ 
-  quotationId, 
-  to, 
-  cc, 
-  message,
-  quotation
-}: { 
-  quotationId: number;
-  to: string;
-  cc: string;
-  message: string;
-  quotation?: Quotation;
-}) => {
-  // Usar Promise.resolve para evitar bloqueo del hilo principal
-  return new Promise<void>((resolve, reject) => {
-    // Usar requestIdleCallback para generar plantillas sin bloquear UI
-    const processEmail = () => {
-      try {
-        // Generar plantillas de correo de forma optimizada
-        let emailHTML = '';
-        let emailText = '';
-        
-        if (quotation) {
-          // Generar plantillas en chunks para evitar bloqueo
-          emailHTML = generateQuotationEmailHTML({ 
-            quotation, 
-            customMessage: message,
-            companyInfo: defaultCompanyConfig
-          });
-          emailText = generateQuotationEmailText({ 
-            quotation, 
-            customMessage: message,
-            companyInfo: defaultCompanyConfig
-          });
-        }
+import { openSnackbar } from './snackbar';
 
-        // Enviar email de forma asíncrona
-        axiosServices.post('/api/Quotation/SendEmail', {
-          quotationId,
-          to,
-          cc,
-          message,
-          subject: `Cotización ${quotation?.NumberQuotation || `#${quotationId}`} - Regalos Corporativos`,
-          htmlTemplate: emailHTML,
-          textTemplate: emailText,
-          attachPdf: true
-        }).then(() => resolve()).catch(reject);
-      } catch (error) {
-        reject(error);
-      }
-    };
-
-    // Usar requestIdleCallback si está disponible, sino setTimeout
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(processEmail);
-    } else {
-      setTimeout(processEmail, 0);
-    }
-  });
-};
 import axiosServices from 'utils/axios';
 import { mutate } from 'swr';
 import { generateQuotationEmailHTML, generateQuotationEmailText } from 'templates/QuotationEmailTemplate';
@@ -69,13 +10,13 @@ const QUOTATIONS_API = '/api/Quotation';
 /**
  * Función general para invalidar cache de cotizaciones
  * Refresca todas las listas de cotizaciones y datos específicos
- * 
+ *
  * @param quotationId - ID de cotización específica a refrescar (opcional)
- * 
+ *
  * @example
  * // Refrescar solo las listas
  * await refreshQuotationsCache();
- * 
+ *
  * // Refrescar listas y cotización específica
  * await refreshQuotationsCache(123);
  */
@@ -100,7 +41,7 @@ export const refreshQuotationsCache = async (quotationId?: number) => {
 
         // Ejecutar todas las invalidaciones en paralelo
         await Promise.allSettled(promises);
-        
+
         console.log('✅ Cache de cotizaciones actualizado correctamente');
         resolve();
       } catch (error) {
@@ -117,7 +58,100 @@ export const refreshQuotationsCache = async (quotationId?: number) => {
     }
   });
 };
+// Descargar Excel de cotización
+export const downloadQuotationExcel = async (quotationId: number): Promise<void> => {
+  // Crear un enlace temporal para descargar el archivo
+  try {
+    const response = await axiosServices.get(`/api/Quotation/DownloadExcel/${quotationId}`.replace(/\/+/g, '/'), {
+      responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    // Nombre sugerido para el archivo
+    link.setAttribute('download', `Cotizacion_${quotationId}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error: any) {
+    // Importar initialState de snackbar para asegurar todos los campos requeridos
+    import('./snackbar').then(({ initialState }) => {
+      const safeInitial = initialState || {};
+      openSnackbar({
+        ...safeInitial,
+        open: true,
+        message: 'No se pudo descargar el Excel de la cotización',
+        variant: 'alert',
+        alert: { ...(safeInitial.alert || {}), color: 'error' }
+      });
+    });
+  }
+};
+// Enviar cotización por correo
+export const sendQuotationEmail = async ({
+  quotationId,
+  to,
+  cc,
+  message,
+  quotation
+}: {
+  quotationId: number;
+  to: string;
+  cc: string;
+  message: string;
+  quotation?: Quotation;
+}) => {
+  // Usar Promise.resolve para evitar bloqueo del hilo principal
+  return new Promise<void>((resolve, reject) => {
+    // Usar requestIdleCallback para generar plantillas sin bloquear UI
+    const processEmail = () => {
+      try {
+        // Generar plantillas de correo de forma optimizada
+        let emailHTML = '';
+        let emailText = '';
 
+        if (quotation) {
+          // Generar plantillas en chunks para evitar bloqueo
+          emailHTML = generateQuotationEmailHTML({
+            quotation,
+            customMessage: message,
+            companyInfo: defaultCompanyConfig
+          });
+          emailText = generateQuotationEmailText({
+            quotation,
+            customMessage: message,
+            companyInfo: defaultCompanyConfig
+          });
+        }
+
+        // Enviar email de forma asíncrona
+        axiosServices
+          .post('/api/Quotation/SendEmail', {
+            quotationId,
+            to,
+            cc,
+            message,
+            subject: `Cotización ${quotation?.NumberQuotation || `#${quotationId}`} - Regalos Corporativos`,
+            htmlTemplate: emailHTML,
+            textTemplate: emailText,
+            attachPdf: true
+          })
+          .then(() => resolve())
+          .catch(reject);
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    // Usar requestIdleCallback si está disponible, sino setTimeout
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(processEmail);
+    } else {
+      setTimeout(processEmail, 0);
+    }
+  });
+};
 // Types for Quotations
 export interface QuotationProduct {
   Id?: number;
@@ -228,7 +262,7 @@ export const quotationsApi = {
   // Buscar productos predictivos
   searchProducts: async (term: string, limit: number = 10): Promise<any[]> => {
     const response = await axiosServices.get(`/api/Quotation/SearchProducts?q=${encodeURIComponent(term)}&limit=${limit}`);
-    const list = Array.isArray(response.data) ? response.data : (response.data?.Message || []);
+    const list = Array.isArray(response.data) ? response.data : response.data?.Message || [];
     return list;
   },
   // Get all quotations with optional status filter
@@ -259,7 +293,9 @@ export const quotationsApi = {
       quotation.products.forEach((p: any, index: number) => {
         if (p.ImageFile instanceof File) formData.append(`productImage_${index}`, p.ImageFile);
       });
-      const response = await axiosServices.post(`${QUOTATIONS_API}/Create`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const response = await axiosServices.post(`${QUOTATIONS_API}/Create`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       return response.data?.Message ?? response.data;
     } else {
       const response = await axiosServices.post(`${QUOTATIONS_API}/Create`, quotation);
@@ -274,11 +310,18 @@ export const quotationsApi = {
     const hasFiles = anyProducts.some((p: any) => p.ImageFile instanceof File);
     if (hasFiles) {
       const formData = new FormData();
-      const productsForJson = anyProducts.map((p: any) => { const { ImageFile, ...rest } = p; return rest; });
+      const productsForJson = anyProducts.map((p: any) => {
+        const { ImageFile, ...rest } = p;
+        return rest;
+      });
       const jsonData = { ...quotation, products: productsForJson };
       formData.append('data', JSON.stringify(jsonData));
-      anyProducts.forEach((p: any, index: number) => { if (p.ImageFile instanceof File) formData.append(`productImage_${index}`, p.ImageFile); });
-      const response = await axiosServices.put(`${QUOTATIONS_API}/Update`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      anyProducts.forEach((p: any, index: number) => {
+        if (p.ImageFile instanceof File) formData.append(`productImage_${index}`, p.ImageFile);
+      });
+      const response = await axiosServices.put(`${QUOTATIONS_API}/Update`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       return response.data?.Message ?? response.data;
     } else {
       const response = await axiosServices.put(`${QUOTATIONS_API}/Update`, quotation);
