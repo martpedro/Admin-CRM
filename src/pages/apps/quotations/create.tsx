@@ -597,6 +597,7 @@ const CreateQuotation = () => {
                         >
                           <MenuItem value="40%">40%</MenuItem>
                           <MenuItem value="50%">50%</MenuItem>
+                          <MenuItem value="100%">100%</MenuItem>
                         </Select>
                         {touched.LiquidationPayment && errors.LiquidationPayment && (
                           <FormHelperText>{String(errors.LiquidationPayment)}</FormHelperText>

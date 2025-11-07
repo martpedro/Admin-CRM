@@ -115,28 +115,15 @@ export async function insertCustomer(newCustomer: CustomerList) {
     console.error('Error creating customer:', error);
     
     // Manejar errores específicos de duplicación
-    if (error.response?.status === 409) {
-      const errorData = error.response.data;
-      
-      if (errorData.type === 'DUPLICATE_EMAIL') {
-        const existingCustomer = errorData.existingCustomer;
-        const assignedTo = existingCustomer?.assignedTo 
-          ? `${existingCustomer.assignedTo.name} (${existingCustomer.assignedTo.email})`
-          : 'Sin asignar';
-        
-        const detailedMessage = `El correo electrónico ya existe. Cliente "${existingCustomer?.name || 'N/A'}" asignado a: ${assignedTo}`;
-        
-        openSnackbar({ 
-          ...defaultSnackbar, 
-          message: detailedMessage, 
-          alert: { ...defaultSnackbar.alert, color: 'error' }
-        });
+    if ( error.error.statusCode === 409) {
+      const errorData = error.error.message;
+      console.log('Error de duplicación detectado:', errorData);
+      if (errorData) {
         
         return { 
           success: false, 
-          error: detailedMessage,
-          type: 'DUPLICATE_EMAIL',
-          existingCustomer
+          error: errorData,
+          type: 'DUPLICATE_EMAIL'
         };
       }
     }
