@@ -45,6 +45,7 @@ export const calculateProductTotal = <T extends Partial<QuotationProduct>>(produ
     PrintCost: printCost,
     Total: total,
     Revenue: revenue,
+    ProfitMargin: profitMargin,
     Commission: commission
   } as T & { Total: number; Revenue: number; Commission: number };
 };
