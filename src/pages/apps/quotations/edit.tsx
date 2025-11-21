@@ -428,32 +428,33 @@ const EditQuotation = () => {
                           name="CustomerId"
                           value={values.CustomerId}
                           onChange={async (e) => {
-                            const customerId = e.target.value as number;
-                            setFieldValue('CustomerId', customerId);
-                            const customer = customers.find((c: any) => c.Id === customerId);
-                            if (customer) setSelectedCustomer(customer);
-                            try {
-                              if (customerId > 0) {
-                                const addresses = await getAddressesByCustomer(customerId);
-                                setCustomerAddresses(addresses);
-                                const firstId = addresses[0]?.Id || 0;
-                                setFieldValue('AddressId', firstId);
-                              } else {
-                                setCustomerAddresses([]);
-                                setFieldValue('AddressId', 0);
-                              }
-                            } catch {
-                              setCustomerAddresses([]);
-                              setFieldValue('AddressId', 0);
+                          const customerId = e.target.value as number;
+                          setFieldValue('CustomerId', customerId);
+                          const customer = customers.find((c: any) => c.Id === customerId);
+                          if (customer) setSelectedCustomer(customer);
+                          try {
+                            if (customerId > 0) {
+                            const addresses = await getAddressesByCustomer(customerId);
+                            setCustomerAddresses(addresses);
+                            const firstId = addresses[0]?.Id || 0;
+                            setFieldValue('AddressId', firstId);
+                            } else {
+                            setCustomerAddresses([]);
+                            setFieldValue('AddressId', 0);
                             }
+                          } catch {
+                            setCustomerAddresses([]);
+                            setFieldValue('AddressId', 0);
+                          }
                           }}
                           onBlur={handleBlur}
+                          disabled
                         >
                           <MenuItem value={0}>Seleccionar cliente</MenuItem>
                           {customers.map((customer: any) => (
-                            <MenuItem key={customer.Id} value={customer.Id}>
-                              {customer.Name} - {customer.Email || 'Sin email'}
-                            </MenuItem>
+                          <MenuItem key={customer.Id} value={customer.Id}>
+                            {customer.Name} - {customer.Email || 'Sin email'}
+                          </MenuItem>
                           ))}
                         </Select>
                         {touched.CustomerId && errors.CustomerId && <FormHelperText>{String(errors.CustomerId)}</FormHelperText>}

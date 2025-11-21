@@ -444,16 +444,18 @@ const CreateQuotation = () => {
                   <Grid container spacing={3}>
                     <Grid size={{ xs: 12, md: 6 }}>
                       <FormControl fullWidth error={Boolean(touched.CustomerId && errors.CustomerId)}>
-                        <InputLabel>Cliente</InputLabel>
-                        <Select
-                          name="CustomerId"
-                          value={values.CustomerId}
-                          onChange={async (e) => {
-                            const customerId = e.target.value as number;
+                        {/* <InputLabel>Cliente</InputLabel> */}
+                        <Autocomplete
+                          options={customers}
+                          getOptionLabel={(option: CustomerList) => `${option.Name} - ${option.Email || 'Sin email'}`}
+                          value={customers.find((c: CustomerList) => c.Id === values.CustomerId) || null}
+                          onChange={async (event, newValue) => {
+                            const customerId = newValue?.Id || 0;
                             setFieldValue('CustomerId', customerId);
-                            const customer = customers.find((c: CustomerList) => c.Id === customerId);
-                            if (customer) {
-                              setSelectedCustomer(customer);
+                            if (newValue) {
+                              setSelectedCustomer(newValue);
+                            } else {
+                              setSelectedCustomer(null);
                             }
                             // Cargar direcciones del cliente y setear AddressId
                             try {
@@ -472,16 +474,16 @@ const CreateQuotation = () => {
                               setFieldValue('AddressId', 0);
                             }
                           }}
-                          onBlur={handleBlur}
-                        >
-                          <MenuItem value={0}>Seleccionar cliente</MenuItem>
-                          {Array.isArray(customers) &&
-                            customers.map((customer: CustomerList) => (
-                              <MenuItem key={customer.Id} value={customer.Id}>
-                                {customer.Name} - {customer.Email || 'Sin email'}
-                              </MenuItem>
-                            ))}
-                        </Select>
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              label="Cliente"
+                              error={Boolean(touched.CustomerId && errors.CustomerId)}
+                              helperText={touched.CustomerId && errors.CustomerId ? String(errors.CustomerId) : ''}
+                            />
+                          )}
+                          isOptionEqualToValue={(option, value) => option.Id === value.Id}
+                        />
                         {touched.CustomerId && errors.CustomerId && <FormHelperText>{errors.CustomerId}</FormHelperText>}
                       </FormControl>
                     </Grid>
