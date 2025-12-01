@@ -39,13 +39,14 @@ import { useQuotations, useQuotationOperations } from 'hooks/useQuotations';
 import QuotationStatusChip from 'components/quotations/QuotationStatusChip';
 
 // assets
-import { Add, Edit, Trash, Eye, SearchNormal1, DocumentDownload } from 'iconsax-react';
+import { Add, Edit, Trash, Eye, SearchNormal1, DocumentDownload, Copy, Clock } from 'iconsax-react';
 import { downloadQuotationExcel } from 'api/quotations';
 import QuotationPdfViewer from 'components/quotations/QuotationPdfViewer';
 import SendQuotationEmailDialog from 'components/quotations/SendQuotationEmailDialog';
 import DeleteQuotationDialog from 'components/quotations/DeleteQuotationDialog';
+import VersionsHistoryDialog from 'components/quotations/VersionsHistoryDialog';
 import Loader from 'components/Loader';
-import { sendQuotationEmail } from 'api/quotations';
+import { sendQuotationEmail, quotationsApi } from 'api/quotations';
 import AdvisorFilter from 'components/AdvisorFilter';
 import { useQuotationDataScope } from 'hooks/useDataScope';
 
@@ -76,6 +77,8 @@ const QuotationsList = () => {
   const [activeTab, setActiveTab] = useState<StatusKey>('todas');
   const [statusChangeLoading, setStatusChangeLoading] = useState<number | null>(null);
   const [selectedAdvisor, setSelectedAdvisor] = useState<string | number | 'all'>('all');
+  const [versionsDialogOpen, setVersionsDialogOpen] = useState(false);
+  const [selectedQuotationForHistory, setSelectedQuotationForHistory] = useState<number | null>(null);
   
   const theme = useTheme();
   const navigate = useNavigate();
@@ -132,6 +135,29 @@ const QuotationsList = () => {
     }
   };
 
+  // Función para copiar cotización
+  const handleCopyQuotation = async (quotationId: number) => {
+    try {
+      const copyData = await quotationsApi.getQuotationForCopy(quotationId);
+      localStorage.setItem('quotationCopyData', JSON.stringify(copyData));
+      navigate('/quotations/create?mode=copy');
+      openSnackbar({ 
+        open: true, 
+        message: 'Cotización copiada. Rellena los datos del cliente.', 
+        variant: 'alert', 
+        alert: { color: 'info' } 
+      } as SnackbarProps);
+    } catch (error) {
+      console.error('Error al copiar cotización:', error);
+      openSnackbar({ 
+        open: true, 
+        message: 'Error al copiar la cotización', 
+        variant: 'alert', 
+        alert: { color: 'error' } 
+      } as SnackbarProps);
+    }
+  };
+
   const quotationsData = useMemo(() => {
     return quotations.map((quotation: Quotation) => ({
       ...quotation,
@@ -165,7 +191,9 @@ const QuotationsList = () => {
 
   // Filtrar cotizaciones por búsqueda y asesor
   const filteredQuotations = useMemo(() => {
-    let filtered = quotationsData;
+    // Primero filtrar solo las últimas versiones (IsLatestVersion !== false)
+    // Esto evita mostrar versiones anteriores en el listado principal
+    let filtered = quotationsData.filter(q => q.IsLatestVersion !== false);
 
     // Aplicar filtro por asesor según permisos
     if (showAdvisorFilter && selectedAdvisor !== 'all') {
@@ -338,9 +366,28 @@ const QuotationsList = () => {
                   >
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>
-                      <Typography variant="subtitle2" color="primary">
-                        {quotation.NumberQuotation}
-                      </Typography>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Typography variant="subtitle2" color="primary">
+                          {quotation.NumberQuotation}
+                        </Typography>
+                        {quotation.Version && quotation.Version > 1 && (
+                          <Chip 
+                            label={`v${quotation.Version}`} 
+                            size="small" 
+                            color="secondary" 
+                            sx={{ height: 20, fontSize: '0.7rem' }}
+                          />
+                        )}
+                        {quotation.IsLatestVersion === false && (
+                          <Chip 
+                            label="Anterior" 
+                            size="small" 
+                            variant="outlined"
+                            color="default"
+                            sx={{ height: 20, fontSize: '0.7rem' }}
+                          />
+                        )}
+                      </Stack>
                     </TableCell>
                     <TableCell>
                       <Box>
@@ -435,9 +482,28 @@ const QuotationsList = () => {
                           variant="icon"
                           label={intl.formatMessage({ id: 'view-pdf' }) || 'Ver PDF'}
                         />
+                        {/* Mostrar botón "Ver Historial" solo si tiene versiones */}
+                        {(quotation.Version > 1 || quotation.BaseQuotationId) && (
+                          <Tooltip title="Ver historial de versiones">
+                            <IconButton 
+                              color="warning" 
+                              onClick={() => {
+                                setSelectedQuotationForHistory(quotation.Id);
+                                setVersionsDialogOpen(true);
+                              }}
+                            >
+                              <Clock />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                         <Tooltip title={intl.formatMessage({ id: 'edit' })}>
                           <IconButton color="primary" onClick={() => navigate(`/quotations/edit/${quotation.Id}`)}>
                             <Edit />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Copiar cotización">
+                          <IconButton color="secondary" onClick={() => handleCopyQuotation(quotation.Id)}>
+                            <Copy />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Enviar por correo">
@@ -518,6 +584,15 @@ const QuotationsList = () => {
         onConfirm={confirmDelete}
         quotationNumber={quotationToDelete?.NumberQuotation}
         loading={deleting}
+      />
+
+      <VersionsHistoryDialog
+        open={versionsDialogOpen}
+        onClose={() => {
+          setVersionsDialogOpen(false);
+          setSelectedQuotationForHistory(null);
+        }}
+        quotationId={selectedQuotationForHistory || 0}
       />
     </>
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Formik, Form, FieldArray } from 'formik';
 import * as Yup from 'yup';
 
@@ -39,7 +39,8 @@ import {
   Tabs,
   Avatar,
   Switch,
-  CircularProgress
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 
@@ -85,6 +86,9 @@ const validationSchema = Yup.object({
 
 const CreateQuotation = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const mode = searchParams.get('mode');
+  const isCopyMode = mode === 'copy';
   const auth = useContext(JWTContext);
   const currentUserId = (auth?.user as any)?.Id || (auth?.user as any)?.id || 0;
   const { createQuotation } = useQuotationOperations();
@@ -94,6 +98,7 @@ const CreateQuotation = () => {
   const [loadingAdvisors, setLoadingAdvisors] = useState(false);
   const [advisorsError, setAdvisorsError] = useState<string | null>(null);
   const [initialUserId, setInitialUserId] = useState<number>(currentUserId || 0);
+  const [copyDataLoaded, setCopyDataLoaded] = useState(false);
   // Cargar asesores según permisos del usuario
   useEffect(() => {
     let active = true;
@@ -142,6 +147,7 @@ const CreateQuotation = () => {
   const [productPushFunction, setProductPushFunction] = useState<((obj: any) => void) | null>(null);
   const [emissionDate, setEmissionDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [creatingAndSending, setCreatingAndSending] = useState(false);
+  const [copiedData, setCopiedData] = useState<any>(null);
 
   // Actualizar initialUserId cuando cambie usuario logueado
   useEffect(() => {
@@ -150,19 +156,51 @@ const CreateQuotation = () => {
     }
   }, [currentUserId]);
 
+  // Cargar datos copiados desde localStorage cuando esté en modo copia
+  useEffect(() => {
+    if (isCopyMode && !copyDataLoaded) {
+      const storedData = localStorage.getItem('quotationCopyData');
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData);
+          console.log('Datos copiados desde localStorage:', parsedData);
+          
+          // Extraer la data correctamente (puede venir con estructura {success, data} o directamente)
+          const copyData = parsedData.data || parsedData;
+          console.log('Datos extraídos para copia:', copyData);
+          
+          setCopiedData(copyData);
+          
+          // Si hay CompanyId, cargar datos de la empresa
+          if (copyData.CompanyId > 0) {
+            getCompanyById(copyData.CompanyId).then(company => {
+              console.log('Empresa cargada:', company);
+              setSelectedCompany(company);
+            }).catch(err => console.error('Error loading company:', err));
+          }
+          
+          setCopyDataLoaded(true);
+          localStorage.removeItem('quotationCopyData');
+        } catch (err) {
+          console.error('Error al cargar datos copiados:', err);
+        }
+      }
+    }
+  }, [isCopyMode, copyDataLoaded, getCompanyById]);
+
   const initialValues: QuotationCreate = {
     CustomerId: customers.length > 0 ? 0 : 0,
-    UserId: advisors.length > 0 ? initialUserId || 0 : 0,
+    UserId: advisors.length > 0 ? (copiedData?.UserId || initialUserId || 0) : 0,
     AddressId: 0,
-    CompanyId: 0,
-    AdvancePayment: '60%',
-    LiquidationPayment: '40%',
-    TimeCredit: '0 días',
-    TimeValidation: '7 días',
+    CompanyId: copiedData?.CompanyId || 0,
+    AdvancePayment: copiedData?.AdvancePayment || '60%',
+    LiquidationPayment: copiedData?.LiquidationPayment || '40%',
+    TimeCredit: copiedData?.TimeCredit || '0 días',
+    TimeValidation: copiedData?.TimeValidation || '7 días',
     SubTotal: 0,
     Tax: 0,
     Total: 0,
-    products: []
+    products: copiedData?.products || []
   };
 
   // Extendemos el tipo en runtime (si la interface original no lo tiene no afecta)
@@ -263,9 +301,32 @@ const CreateQuotation = () => {
       <Breadcrumbs title />
 
       <Formik enableReinitialize initialValues={initialValues} validationSchema={validationSchema} onSubmit={handleSubmit}>
-        {({ values, errors, touched, handleChange, handleBlur, setFieldValue }) => (
-          <Form>
-            <Grid container spacing={3}>
+        {({ values, errors, touched, handleChange, handleBlur, setFieldValue, resetForm }) => {
+          // Recalcular totales cuando cambien los productos
+          useEffect(() => {
+            if (values.products && values.products.length > 0) {
+              console.log('Recalculando totales para productos:', values.products);
+              const totals = calculateTotals(values.products as any);
+              console.log('Totales calculados:', totals);
+              setFieldValue('SubTotal', totals.SubTotal);
+              setFieldValue('Tax', totals.Tax);
+              setFieldValue('Total', totals.Total);
+            } else if (values.products && values.products.length === 0) {
+              // Si no hay productos, resetear totales a 0
+              setFieldValue('SubTotal', 0);
+              setFieldValue('Tax', 0);
+              setFieldValue('Total', 0);
+            }
+          }, [values.products, setFieldValue]);
+
+          return (
+            <Form>
+              {isCopyMode && (
+                <Alert severity="info" sx={{ mb: 3 }}>
+                  Esta cotización se está creando desde una copia. Los productos y condiciones comerciales han sido pre-llenados. Por favor, selecciona el cliente y dirección para continuar.
+                </Alert>
+              )}
+              <Grid container spacing={3}>
               {/* Company Selection */}
               <Grid size={12}>
                 <MainCard title="Información de la Empresa">
@@ -578,6 +639,7 @@ const CreateQuotation = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                         >
+                          <MenuItem value="0%">0%</MenuItem>
                           <MenuItem value="60%">60%</MenuItem>
                           <MenuItem value="50%">50%</MenuItem>
                         </Select>
@@ -1007,7 +1069,8 @@ const CreateQuotation = () => {
               </Grid>
             </Grid>
           </Form>
-        )}
+          );
+        }}
       </Formik>
 
       <ProductAddDialog

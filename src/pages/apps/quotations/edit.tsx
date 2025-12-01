@@ -50,6 +50,8 @@ import SendQuotationEmailDialog from 'components/quotations/SendQuotationEmailDi
 import axiosServices from 'utils/axios';
 import { sendQuotationEmail, refreshQuotationsCache } from 'api/quotations';
 import { useNotifications } from 'utils/notifications';
+import QuotationVersionSelector from 'components/quotations/QuotationVersionSelector';
+import quotationsApi from 'api/quotations';
 
 const validationSchema = Yup.object({
   CustomerId: Yup.number().required('El cliente es requerido'),
@@ -87,6 +89,8 @@ const EditQuotation = () => {
   const [emissionDate, setEmissionDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [openProductDialog, setOpenProductDialog] = useState(false);
   const [productPushFunction, setProductPushFunction] = useState<((obj: any) => void) | null>(null);
+  const [creatingVersion, setCreatingVersion] = useState(false);
+  const [copyingQuotation, setCopyingQuotation] = useState(false);
   // Estados PDF removidos: se utiliza componente reutilizable
 
   // Cargar asesores
@@ -171,21 +175,74 @@ const EditQuotation = () => {
   // Funciones movidas a utils/quotation
 
   const handleSubmit = async (values: any) => {
+    // Verificar el estado actual de la cotización ANTES de intentar actualizar
+    if (!quotation) {
+      notifications.error('No se pudo obtener la información de la cotización');
+      return;
+    }
+
+    // Si la cotización ya fue enviada (Estado: "En proceso"), crear nueva versión
+    if (quotation.Status === 'En proceso') {
+      notifications.info('Esta cotización ya fue enviada. Creando nueva versión automáticamente...');
+      
+      try {
+        setCreatingVersion(true);
+        
+        // Crear nueva versión
+        const newVersion = await quotationsApi.createVersion(
+          quotationId, 
+          'Versión creada automáticamente al modificar cotización enviada'
+        );
+        
+        notifications.success(`Nueva versión ${newVersion.NumberQuotation} creada. Redirigiendo...`);
+        
+        // Refrescar cache
+        await refreshQuotationsCache();
+        
+        // Navegar a la nueva versión para que el usuario pueda editarla
+        navigate(`/quotations/edit/${newVersion.Id}`);
+        
+      } catch (versionError: any) {
+        notifications.error(versionError?.message || 'Error al crear nueva versión');
+        console.error('Error creando versión automática:', versionError);
+      } finally {
+        setCreatingVersion(false);
+      }
+      
+      return; // Salir sin intentar actualizar
+    }
+
+    // Si la cotización NO ha sido enviada (Estado: "Nueva" o "Cerrada"), actualizar normalmente
     try {
       const result = await updateQuotation(values);
       console.log('Resultado de actualización:', result);
 
       if (result.success) {
-        console.log('Resultado mensaje de actualización:', result);
-
-        notifications.success('Cotización actualizada');
+        notifications.success('Cotización actualizada exitosamente');
         // Usar función centralizada para refrescar cache
         await refreshQuotationsCache(quotationId);
       } else {
         notifications.error(result.error || 'Error al actualizar');
       }
     } catch (e: any) {
-      notifications.error(e?.message || 'Error al actualizar');
+      notifications.error(e?.message || 'Error al actualizar la cotización');
+      console.error('Error en actualización:', e);
+    }
+  };
+
+  const handleCopyQuotation = async () => {
+    if (!quotationId) return;
+    
+    setCopyingQuotation(true);
+    try {
+      const copyData = await quotationsApi.getQuotationForCopy(quotationId);
+      localStorage.setItem('quotationCopyData', JSON.stringify(copyData));
+      navigate('/quotations/create?mode=copy');
+    } catch (error) {
+      console.error('Error copying quotation:', error);
+      notifications.error('Error al copiar la cotización');
+    } finally {
+      setCopyingQuotation(false);
     }
   };
 
@@ -195,31 +252,73 @@ const EditQuotation = () => {
       return;
     }
 
+    if (!quotation) {
+      notifications.error('No se pudo obtener la información de la cotización');
+      return;
+    }
+
     setSavingAndSending(true);
+    
     try {
-      // Primero guardar la cotización usando la API
-      const updateResult = await updateQuotation(values);
-      if (!updateResult.success) {
-        notifications.error(updateResult.error || 'Error al guardar la cotización');
-        return;
+      let quotationIdToSend = quotationId;
+      let quotationNumberToSend = quotation.NumberQuotation;
+
+      // Si la cotización ya fue enviada (Estado: "En proceso"), crear nueva versión
+      if (quotation.Status === 'En proceso') {
+        notifications.info('Cotización ya enviada. Creando nueva versión para enviar...');
+        
+        try {
+          // Crear nueva versión
+          const newVersion = await quotationsApi.createVersion(
+            quotationId, 
+            'Versión creada automáticamente al guardar y enviar cotización'
+          );
+          
+          // Actualizar IDs para enviar la nueva versión
+          quotationIdToSend = newVersion.Id;
+          quotationNumberToSend = newVersion.NumberQuotation;
+          
+          notifications.success(`Nueva versión ${quotationNumberToSend} creada`);
+          
+        } catch (versionError: any) {
+          notifications.error(versionError?.message || 'Error al crear nueva versión');
+          console.error('Error creando versión automática:', versionError);
+          setSavingAndSending(false);
+          return; // Salir si no se pudo crear la versión
+        }
+      } else {
+        // Si la cotización NO ha sido enviada (Estado: "Nueva" o "Cerrada"), actualizar normalmente
+        const updateResult = await updateQuotation(values);
+        if (!updateResult.success) {
+          notifications.error(updateResult.error || 'Error al guardar la cotización');
+          setSavingAndSending(false);
+          return;
+        }
       }
 
-      // Luego enviar por correo
-      if (quotation?.Id) {
-        await sendQuotationEmail({
-          quotationId: quotation.Id,
-          to: selectedCustomer.Email,
-          cc: '',
-          message: `Estimado/a ${selectedCustomer.Name},\n\nEsperamos que se encuentre bien. Adjunto encontrará la cotización #${quotation.NumberQuotation} solicitada.\n\nQuedamos a la espera de sus comentarios.\n\nSaludos cordiales.`
-        });
-      }
+      // Enviar por correo (usando el ID correspondiente)
+      await sendQuotationEmail({
+        quotationId: quotationIdToSend,
+        to: selectedCustomer.Email,
+        cc: '',
+        message: `Estimado/a ${selectedCustomer.Name},\n\nEsperamos que se encuentre bien. Adjunto encontrará la cotización #${quotationNumberToSend} solicitada.\n\nQuedamos a la espera de sus comentarios.\n\nSaludos cordiales.`
+      });
 
-      // Usar función centralizada para refrescar cache
-      await refreshQuotationsCache(quotationId);
+      // Refrescar cache
+      await refreshQuotationsCache(quotationIdToSend);
 
       notifications.success('Cotización guardada y enviada por correo exitosamente');
+
+      // Si se creó una nueva versión, navegar a ella
+      if (quotation.Status === 'En proceso' && quotationIdToSend !== quotationId) {
+        setTimeout(() => {
+          navigate(`/apps/quotations/edit/${quotationIdToSend}`);
+        }, 1500);
+      }
+
     } catch (e: any) {
       notifications.error(e?.message || 'Error al guardar y enviar');
+      console.error('Error en guardar y enviar:', e);
     } finally {
       setSavingAndSending(false);
     }
@@ -236,9 +335,22 @@ const EditQuotation = () => {
         {({ values, errors, touched, handleChange, handleBlur, setFieldValue }) => (
           <Form>
             <Grid container spacing={3}>
+              {/* Alerta de cotización enviada - Ahora la versión se crea automáticamente */}
+              {/* La creación de versión sucede automáticamente al intentar guardar una cotización enviada */}
+             
               {/* Empresa */}
               <Grid size={12}>
-                <MainCard title={`Editar Cotización #${quotation?.NumberQuotation || ''}`}>
+                <MainCard 
+                  title={`Editar Cotización #${quotation?.NumberQuotation || ''} (Versión ${quotation?.Version || 1})`}
+                  secondary={
+                    quotation && (
+                      <QuotationVersionSelector 
+                        currentQuotationId={quotationId} 
+                        currentVersion={quotation.Version}
+                      />
+                    )
+                  }
+                >
                   <Grid container spacing={3}>
                     <Grid size={{ xs: 12, md: 6 }}>
                       <FormControl fullWidth error={Boolean(touched.CompanyId && errors.CompanyId)}>
@@ -544,6 +656,7 @@ const EditQuotation = () => {
                           onChange={handleChange}
                           onBlur={handleBlur}
                         >
+                          <MenuItem value="0%">0%</MenuItem>
                           <MenuItem value="60%">60%</MenuItem>
                           <MenuItem value="50%">50%</MenuItem>
                         </Select>
@@ -564,6 +677,7 @@ const EditQuotation = () => {
                         >
                           <MenuItem value="40%">40%</MenuItem>
                           <MenuItem value="50%">50%</MenuItem>
+                          <MenuItem value="100%">100%</MenuItem>
                         </Select>
                         {touched.LiquidationPayment && errors.LiquidationPayment && (
                           <FormHelperText>{String(errors.LiquidationPayment)}</FormHelperText>
@@ -941,6 +1055,15 @@ const EditQuotation = () => {
                   {quotation?.Id && <QuotationPdfViewer quotationId={quotation.Id} quotationNumber={quotation.NumberQuotation} />}
                   <Button variant="outlined" onClick={() => navigate('/quotations')}>
                     Volver
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    color="secondary"
+                    disabled={copyingQuotation}
+                    onClick={handleCopyQuotation}
+                    startIcon={copyingQuotation ? <CircularProgress size={20} /> : undefined}
+                  >
+                    {copyingQuotation ? 'Copiando...' : 'Copiar Cotización'}
                   </Button>
                   <Button type="submit" variant="contained">
                     Guardar Cambios

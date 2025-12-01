@@ -383,6 +383,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                           id="customer-email"
                           placeholder="Ingrese el correo electrónico"
                           {...getFieldProps('email')}
+                          onChange={(e) => setFieldValue('email', e.target.value.trim())}
                           error={Boolean(touched.email && errors.email)}
                           helperText={touched.email && errors.email}
                         />

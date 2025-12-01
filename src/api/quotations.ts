@@ -213,6 +213,10 @@ export interface Quotation {
   Tax: number;
   Total: number;
   Status: 'Nueva' | 'En proceso' | 'Cerrada';
+  Version: number;
+  BaseQuotationId: number | null;
+  VersionNotes: string | null;
+  IsLatestVersion: boolean;
   User: {
     Id: number;
     Name: string;
@@ -241,6 +245,62 @@ export interface Quotation {
   };
   products: QuotationProduct[];
   CreatedAt: string;
+}
+
+// Tipos adicionales para versionado
+export interface QuotationVersion {
+  id: number;
+  number: string;
+  version: number;
+  status: string;
+  total: number;
+  subTotal: number;
+  tax: number;
+  productsCount: number;
+  createdAt: string;
+  versionNotes?: string;
+}
+
+export interface QuotationComparison {
+  version1: QuotationVersion;
+  version2: QuotationVersion;
+  differences: {
+    totalDiff: number;
+    subTotalDiff: number;
+    taxDiff: number;
+    productsCountDiff: number;
+  };
+}
+
+// Tipos para funcionalidad de copia
+export interface QuotationProductCopy {
+  Image: string;
+  Code: string;
+  Description: string;
+  Specifications: string;
+  Inks: string;
+  DeliveryTime: string;
+  Quantity: number;
+  VendorCost: number;
+  PrintCost: number;
+  UnitPrice: number;
+  Total: number;
+  Revenue: number;
+  Commission: number;
+  Origin?: string;
+  PrintDetails?: string;
+  ProfitMargin?: number;
+  ExtraProfit?: number;
+}
+
+export interface QuotationCopyData {
+  AdvancePayment: string;
+  LiquidationPayment: string;
+  TimeCredit: string;
+  TimeValidation: string;
+  CompanyId: number;
+  UserId: number;
+  products: QuotationProductCopy[];
 }
 
 // API Functions
@@ -347,6 +407,33 @@ export const quotationsApi = {
   updateStatus: async (id: number, status: 'Nueva' | 'En proceso' | 'Cerrada'): Promise<any> => {
     const response = await axiosServices.put(`${QUOTATIONS_API}/UpdateStatus/${id}`, { status });
     return response.data?.Message ?? response.data;
+  },
+
+  // Create new version of a sent quotation
+  createVersion: async (id: number, versionNotes?: string): Promise<Quotation> => {
+    const response = await axiosServices.post(`${QUOTATIONS_API}/CreateVersion/${id}`, { versionNotes });
+    return response.data?.data ?? response.data?.Message?.data ?? response.data;
+  },
+
+  // Get all versions of a quotation
+  getVersions: async (id: number): Promise<Quotation[]> => {
+    const response = await axiosServices.get(`${QUOTATIONS_API}/Versions/${id}`);
+    console.log('Respuesta de getVersions:', response.data.Message);
+    const result = response.data?.Message ? response.data?.Message?.data : {};
+    // Asegurar que siempre retornamos un array
+    return Array.isArray(result) ? result : [];
+  },
+
+  // Compare two versions
+  compareVersions: async (id1: number, id2: number): Promise<QuotationComparison> => {
+    const response = await axiosServices.get(`${QUOTATIONS_API}/Compare/${id1}/${id2}`);
+    return response.data?.data ?? response.data?.Message ?? response.data;
+  },
+
+  // Get quotation data for copying
+  getQuotationForCopy: async (id: number): Promise<QuotationCopyData> => {
+    const response = await axiosServices.get(`${QUOTATIONS_API}/GetForCopy/${id}`);
+    return response.data?.data ?? response.data?.Message ?? response.data;
   }
 };
 
