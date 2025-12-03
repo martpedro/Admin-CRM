@@ -64,6 +64,7 @@ import { duplicateProductLine } from 'utils/duplicateProduct';
 import Autocomplete from '@mui/material/Autocomplete';
 import ProductAddDialog, { ProductWithOrigin } from 'components/quotations/ProductAddDialog';
 import { getAddressesByCustomer } from 'api/customer';
+import QuotationActionButtons from 'components/quotations/QuotationActionButtons';
 
 // types
 import { QuotationCreate, QuotationProduct } from 'api/quotations';
@@ -188,6 +189,10 @@ const CreateQuotation = () => {
     }
   }, [isCopyMode, copyDataLoaded, getCompanyById]);
 
+  // Calcular totales desde los productos copiados si existen
+  const copiedProducts = copiedData?.products || [];
+  const initialTotals = copiedProducts.length > 0 ? calculateTotals(copiedProducts) : { SubTotal: 0, Tax: 0, Total: 0 };
+
   const initialValues: QuotationCreate = {
     CustomerId: customers.length > 0 ? 0 : 0,
     UserId: advisors.length > 0 ? (copiedData?.UserId || initialUserId || 0) : 0,
@@ -197,10 +202,10 @@ const CreateQuotation = () => {
     LiquidationPayment: copiedData?.LiquidationPayment || '40%',
     TimeCredit: copiedData?.TimeCredit || '0 días',
     TimeValidation: copiedData?.TimeValidation || '7 días',
-    SubTotal: 0,
-    Tax: 0,
-    Total: 0,
-    products: copiedData?.products || []
+    SubTotal: initialTotals.SubTotal,
+    Tax: initialTotals.Tax,
+    Total: initialTotals.Total,
+    products: copiedProducts
   };
 
   // Extendemos el tipo en runtime (si la interface original no lo tiene no afecta)
@@ -1049,23 +1054,19 @@ const CreateQuotation = () => {
 
               {/* Actions */}
               <Grid size={12}>
-                <Stack direction="row" spacing={2} justifyContent="flex-end">
-                  <Button variant="outlined" onClick={() => navigate('/apps/quotations')}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" variant="contained">
-                    Crear Cotización
-                  </Button>
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    disabled={creatingAndSending || !customers.find((c: any) => c.Id === values.CustomerId)?.Email}
-                    onClick={() => handleCreateAndSendEmail(values)}
-                    startIcon={creatingAndSending ? <CircularProgress size={20} /> : undefined}
-                  >
-                    {creatingAndSending ? 'Creando y Enviando...' : 'Crear y Enviar por Correo'}
-                  </Button>
-                </Stack>
+                <QuotationActionButtons
+                  mode="create"
+                  onCancel={() => navigate('/quotations')}
+                  onSave={() => handleSubmit(values)}
+                  onSaveAndSend={() => handleCreateAndSendEmail(values)}
+                  isSavingAndSending={creatingAndSending}
+                  disableSaveAndSend={!customers.find((c: any) => c.Id === values.CustomerId)?.Email}
+                  disableSaveAndSendReason={
+                    !customers.find((c: any) => c.Id === values.CustomerId)?.Email
+                      ? 'El cliente seleccionado no tiene email registrado'
+                      : undefined
+                  }
+                />
               </Grid>
             </Grid>
           </Form>

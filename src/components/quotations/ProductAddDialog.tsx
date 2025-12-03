@@ -41,6 +41,7 @@ const initialProduct: ProductWithOrigin = {
   Description: '',
   Specifications: '',
   Inks: '',
+  PrintDetails: '', // Agregar campo para detalle de impresión
   DeliveryTime: '',
   Quantity: 1,
   VendorCost: 0,
@@ -89,8 +90,7 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
       setSearchLoading(false);
     }
   };
-//http://localhost/admin/upload-image.php
-  // Cálculo reutilizado desde utils/quotation
+  
 
   const handleAdd = async () => {
     if (productSearchMode === 0 && !manualProduct.Code) {
@@ -112,10 +112,10 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
     }
     let imageUrl = manualProduct.Image;
     if (productSearchMode === 1) {
-      if (!manualProduct.Code || !manualProduct.Description || manualProduct.VendorCost <= 0) {
+      if (!manualProduct.Code || manualProduct.VendorCost <= 0) {
         openSnackbar({
           open: true,
-          message: 'Complete Código, Descripción y Precio de Proveedor',
+          message: 'Complete Código y Precio de Proveedor',
           variant: 'alert',
           alert: { color: 'warning', variant: 'filled' },
           anchorOrigin: { vertical: 'bottom', horizontal: 'right' },
@@ -280,6 +280,7 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
                       Description: value.Description || '',
                       Specifications: value.Specifications || '',
                       Inks: value.Inks || '',
+                      PrintDetails: value.Inks || '', // Mapear Inks a PrintDetails para compatibilidad con la tabla
                       DeliveryTime: value.DeliveryTime || '',
                       Quantity: 1,
                       VendorCost: Number(value.VendorCost) || 0,
@@ -350,10 +351,9 @@ export const ProductAddDialog = ({ open, onClose, onAdd }: ProductAddDialogProps
             <Box sx={{ mt: 2 }}>
               <TextField fullWidth label="Código *" value={manualProduct.Code} onChange={(e) => setManualProduct(p => ({ ...p, Code: e.target.value }))} sx={{ mb: 2 }} />
               <TextField fullWidth label="Código Proveedor" value={manualProduct.CodeVendor} onChange={(e) => setManualProduct(p => ({ ...p, CodeVendor: e.target.value }))} sx={{ mb: 2 }} />
-              <TextField fullWidth label="Descripción *" value={manualProduct.Description} onChange={(e) => setManualProduct(p => ({ ...p, Description: e.target.value }))} sx={{ mb: 2 }} />
               <TextField fullWidth label="Especificaciones" multiline rows={3} value={manualProduct.Specifications} onChange={(e) => setManualProduct(p => ({ ...p, Specifications: e.target.value }))} sx={{ mb: 2 }} />
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-                <TextField label="Tintas" fullWidth value={manualProduct.Inks} onChange={(e) => setManualProduct(p => ({ ...p, Inks: e.target.value }))} />
+                <TextField label="Tintas / Detalle de Impresión" fullWidth value={manualProduct.Inks} onChange={(e) => setManualProduct(p => ({ ...p, Inks: e.target.value, PrintDetails: e.target.value }))} />
                 <TextField label="Tiempo Entrega" fullWidth value={manualProduct.DeliveryTime} onChange={(e) => setManualProduct(p => ({ ...p, DeliveryTime: e.target.value }))} />
               </Stack>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>

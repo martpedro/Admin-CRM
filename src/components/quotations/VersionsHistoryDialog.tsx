@@ -26,12 +26,14 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 // project imports
-import { quotationsApi, Quotation } from 'api/quotations';
+import { quotationsApi, Quotation, refreshQuotationsCache } from 'api/quotations';
 import QuotationStatusChip from './QuotationStatusChip';
 import QuotationPdfViewer from './QuotationPdfViewer';
+import { useQuotationOperations } from 'hooks/useQuotations';
+import { useNotifications } from 'utils/notifications';
 
 // assets
-import { Edit, Copy, DocumentDownload, Eye } from 'iconsax-react';
+import { Edit, Copy, DocumentDownload, Eye, TickCircle } from 'iconsax-react';
 
 interface VersionsHistoryDialogProps {
   open: boolean;
@@ -43,7 +45,10 @@ const VersionsHistoryDialog = ({ open, onClose, quotationId }: VersionsHistoryDi
   const [versions, setVersions] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authorizingId, setAuthorizingId] = useState<number | null>(null);
   const navigate = useNavigate();
+  const { updateQuotationStatus } = useQuotationOperations();
+  const notifications = useNotifications();
 
   useEffect(() => {
     if (open && quotationId) {
@@ -81,6 +86,23 @@ const VersionsHistoryDialog = ({ open, onClose, quotationId }: VersionsHistoryDi
   const handleEdit = (versionId: number) => {
     navigate(`/quotations/edit/${versionId}`);
     onClose();
+  };
+
+  const handleAuthorize = async (versionId: number) => {
+    setAuthorizingId(versionId);
+    try {
+      const result = await updateQuotationStatus(versionId, 'En proceso');
+      if (result.success) {
+        notifications.success('Cotización autorizada exitosamente');
+        await refreshQuotationsCache(versionId);
+        // Recargar versiones para actualizar el estado
+        await loadVersions();
+      }
+    } catch (error) {
+      notifications.error('Error al autorizar la cotización');
+    } finally {
+      setAuthorizingId(null);
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -172,6 +194,22 @@ const VersionsHistoryDialog = ({ open, onClose, quotationId }: VersionsHistoryDi
                           variant="icon"
                           label="Ver PDF"
                         />
+                        {version.Status === 'En proceso' && (
+                          <Tooltip title="Autorizar cotización">
+                            <IconButton 
+                              color="success" 
+                              size="small"
+                              onClick={() => handleAuthorize(version.Id)}
+                              disabled={authorizingId === version.Id}
+                            >
+                              {authorizingId === version.Id ? (
+                                <CircularProgress size={18} />
+                              ) : (
+                                <TickCircle size={18} />
+                              )}
+                            </IconButton>
+                          </Tooltip>
+                        )}
                         <Tooltip title="Editar esta versión">
                           <IconButton 
                             color="primary" 
