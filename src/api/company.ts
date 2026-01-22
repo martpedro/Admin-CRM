@@ -1,6 +1,8 @@
 import axiosServices from 'utils/axios';
 import { openSnackbar } from 'api/snackbar';
 import { SnackbarProps } from 'types/snackbar';
+import { CompanyInfo, PaymentConfiguration } from 'types/company';
+
 const defaultSnackbar: SnackbarProps = {
   action: false,
   open: true,
@@ -15,7 +17,6 @@ const defaultSnackbar: SnackbarProps = {
   dense: false,
   iconVariant: 'usedefault'
 };
-import { CompanyInfo } from 'types/company';
 
 const COMPANY_API = '/api/Company';
 
@@ -146,6 +147,95 @@ export const companyApi = {
       const errorMessage = error.response?.data?.message || error.message || 'Error al eliminar empresa';
       openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
       return { deleted: false };
+    }
+  }
+};
+
+// API para Payment Configuration
+export const paymentConfigApi = {
+  // Obtener configuración de pago de una empresa
+  getByCompany: async (companyId: number): Promise<PaymentConfiguration | null> => {
+    try {
+      const response = await axiosServices.get(`/api/Company/${companyId}/payment-configuration`);
+      console.log('🔍 Respuesta completa del API:', response);
+      console.log('🔍 response.data:', response.data);
+      
+      // El backend envuelve la respuesta en Message
+      const result = response.data.Message || response.data;
+      
+      if (result.success && result.data) {
+        console.log('✅ Datos encontrados:', result.data);
+        return result.data;
+      }
+      console.log('⚠️ No hay datos en la respuesta');
+      return null;
+    } catch (error: any) {
+      console.error('❌ Error al obtener configuración de pago:', error);
+      return null;
+    }
+  },
+
+  // Crear o actualizar configuración (upsert)
+  upsert: async (companyId: number, data: Partial<PaymentConfiguration>): Promise<PaymentConfiguration | null> => {
+    try {
+      const response = await axiosServices.post(`/api/Company/${companyId}/payment-configuration`, data);
+      
+      // El backend envuelve la respuesta en Message
+      const result = response.data.Message || response.data;
+      
+      if (result.success) {
+        openSnackbar({ 
+          ...defaultSnackbar, 
+          message: 'Configuración de pago guardada correctamente.', 
+          alert: { ...defaultSnackbar.alert, color: 'success' } 
+        });
+        return result.data;
+      }
+      return null;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Error al guardar configuración de pago';
+      openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
+      return null;
+    }
+  },
+
+  // Desactivar configuración
+  deactivate: async (companyId: number, id: number): Promise<boolean> => {
+    try {
+      const response = await axiosServices.delete(`/api/Company/${companyId}/payment-configuration/${id}/deactivate`);
+      if (response.data.success) {
+        openSnackbar({ 
+          ...defaultSnackbar, 
+          message: 'Configuración desactivada correctamente.', 
+          alert: { ...defaultSnackbar.alert, color: 'success' } 
+        });
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Error al desactivar configuración';
+      openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
+      return false;
+    }
+  },
+
+  // Eliminar configuración permanentemente
+  delete: async (companyId: number, id: number): Promise<boolean> => {
+    try {
+      const response = await axiosServices.delete(`/api/Company/${companyId}/payment-configuration/${id}`);
+      if (response.data.success) {
+        openSnackbar({ 
+          ...defaultSnackbar, 
+          message: 'Configuración eliminada correctamente.', 
+          alert: { ...defaultSnackbar.alert, color: 'success' } 
+        });
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message || 'Error al eliminar configuración';
+      openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
+      return false;
     }
   }
 };

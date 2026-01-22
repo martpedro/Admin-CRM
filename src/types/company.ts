@@ -11,3 +11,38 @@ export interface CompanyInfo {
   quotationLetter?: string;
   isActive?: boolean; // Corresponde a IsActive en el backend
 }
+
+// Tipos para métodos de pago
+export interface AcceptedPaymentMethods {
+  transferencia?: boolean;
+  efectivo?: boolean;
+  cheque?: boolean;
+  tarjetaDebito?: boolean;
+  tarjetaCredito?: boolean;
+  paypal?: boolean;
+  openpay?: boolean;
+  mercadopago?: boolean;
+}
+
+export interface AcceptedCards {
+  debit?: string[];
+  credit?: string[];
+}
+
+export interface PaymentConfiguration {
+  Id?: number;
+  CompanyId: number;
+  BankName?: string;
+  AccountNumber?: string;
+  ClaveInterbancaria?: string;
+  AccountHolder?: string;
+  BankBranch?: string;
+  SwiftCode?: string;
+  AcceptedPaymentMethods?: AcceptedPaymentMethods;
+  AcceptedCards?: AcceptedCards;
+  PaymentNotes?: string;
+  ShowInQuotation?: boolean;
+  IsActive?: boolean;
+  CreatedAt?: string;
+  UpdatedAt?: string;
+}

@@ -17,17 +17,21 @@ import MainCard from 'components/MainCard';
 import { CSVExport, TablePagination, HeaderSort } from 'components/third-party/react-table';
 import EmptyReactTable from 'components/EmptyReactTable';
 import IconButton from 'components/@extended/IconButton';
-import { Add, Edit, Trash } from 'iconsax-react';
+import { Add, Edit, Trash, MoneyChange } from 'iconsax-react';
 
-import { companyApi } from 'api/company';
-import { CompanyInfo } from 'types/company';
+import { companyApi, paymentConfigApi } from 'api/company';
+import { CompanyInfo, PaymentConfiguration } from 'types/company';
 import CompanyModal from 'sections/apps/company/CompanyModal';
+import PaymentConfigModal from 'sections/apps/company/PaymentConfigModal';
 
 export default function CompanyListPage() {
   const [rows, setRows] = useState<CompanyInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CompanyInfo | null>(null);
+  const [paymentConfigOpen, setPaymentConfigOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<CompanyInfo | null>(null);
+  const [currentPaymentConfig, setCurrentPaymentConfig] = useState<PaymentConfiguration | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -36,6 +40,37 @@ export default function CompanyListPage() {
       setRows(data);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenPaymentConfig = async (company: CompanyInfo) => {
+    console.log('🔵 Abriendo modal para empresa:', company);
+    setSelectedCompany(company);
+    // Cargar datos ANTES de abrir el modal
+    const config = await paymentConfigApi.getByCompany(company.id);
+    console.log('🟢 Configuración cargada del API:', config);
+    setCurrentPaymentConfig(config);
+    // Abrir después de tener los datos
+    setPaymentConfigOpen(true);
+  };
+
+  const handlePaymentConfigSubmit = async (values: Partial<PaymentConfiguration>) => {
+    if (!selectedCompany) return;
+    
+    try {
+      const result = await paymentConfigApi.upsert(selectedCompany.id, values);
+      
+      if (result) {
+        // Actualizar el estado con la nueva configuración
+        setCurrentPaymentConfig(result);
+        // Cerrar el modal
+        setPaymentConfigOpen(false);
+        setSelectedCompany(null);
+        setCurrentPaymentConfig(null);
+      }
+    } catch (error) {
+      console.error('Error al guardar configuración:', error);
+      // El error ya se muestra en el snackbar desde el API
     }
   };
 
@@ -62,6 +97,11 @@ export default function CompanyListPage() {
       header: 'Acciones',
       cell: ({ row }) => (
         <Stack direction="row" sx={{ gap: 1 }}>
+          <Tooltip title="Configurar Métodos de Pago">
+            <IconButton color="success" onClick={() => handleOpenPaymentConfig(row.original)}>
+              <MoneyChange />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Editar"><IconButton onClick={() => { setEditing(row.original); setOpen(true); }}><Edit /></IconButton></Tooltip>
           <Tooltip title="Eliminar"><IconButton color="error" onClick={async () => {
             const ok = window.confirm('¿Eliminar empresa?');
@@ -127,6 +167,20 @@ export default function CompanyListPage() {
           </TableBody>
         </Table>
       </TableContainer>
+      {selectedCompany && paymentConfigOpen && (
+        <PaymentConfigModal
+          open={paymentConfigOpen}
+          onClose={() => {
+            setPaymentConfigOpen(false);
+            setSelectedCompany(null);
+            setCurrentPaymentConfig(null);
+          }}
+          companyId={selectedCompany.id}
+          companyName={selectedCompany.razonSocial}
+          initial={currentPaymentConfig || undefined}
+          onSubmit={handlePaymentConfigSubmit}
+        />
+      )}
       <Divider />
       <Box sx={{ p: 2 }}>
         <TablePagination {...{ setPageSize: () => {}, setPageIndex: () => {}, getState: () => table.getState(), getPageCount: () => 1 }} />

@@ -59,6 +59,7 @@ const validationSchema = Yup.object({
   UserId: Yup.number().required('El asesor es requerido'),
   AddressId: Yup.number().required('La dirección es requerida'),
   CompanyId: Yup.number().required('La empresa es requerida'),
+  QuotationName: Yup.string().required('El nombre de la cotización es requerido'),
   AdvancePayment: Yup.string().required('El anticipo es requerido'),
   LiquidationPayment: Yup.string().required('La liquidación es requerida'),
   TimeCredit: Yup.string().required('El tiempo de crédito es requerido'),
@@ -70,7 +71,7 @@ const EditQuotation = () => {
   const notifications = useNotifications();
   const [openSendEmail, setOpenSendEmail] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
-  const [savingAndSending, setSavingAndSending] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { id } = useParams();
   const quotationId = Number(id);
   const navigate = useNavigate();
@@ -93,7 +94,7 @@ const EditQuotation = () => {
   const [creatingVersion, setCreatingVersion] = useState(false);
   const [copyingQuotation, setCopyingQuotation] = useState(false);
   const [authorizingQuotation, setAuthorizingQuotation] = useState(false);
-  // Estados PDF removidos: se utiliza componente reutilizable
+  const [openPdfViewer, setOpenPdfViewer] = useState(false);
 
   // Cargar asesores
   useEffect(() => {
@@ -140,6 +141,8 @@ const EditQuotation = () => {
         UserId: advisors.length > 0 ? quotation.User?.Id || (auth?.user as any)?.Id || 0 : 0,
         AddressId: quotation.address?.Id || 0,
         CompanyId: quotation.Company?.Id || 0,
+        QuotationName: quotation.QuotationName || '',
+        ShowPaymentInfo: quotation.ShowPaymentInfo !== undefined ? quotation.ShowPaymentInfo : true,
         AdvancePayment: quotation.AdvancePayment || '',
         LiquidationPayment: quotation.LiquidationPayment || '',
         // Normalizar valores para que coincidan con las opciones del select (dias -> días)
@@ -184,41 +187,38 @@ const EditQuotation = () => {
       return;
     }
 
+    setIsSaving(true);
+
     // Si la cotización ya fue enviada (Estado: "En proceso"), crear nueva versión con los cambios actuales
     if (quotation.Status === 'En proceso') {
+      // Validar que el nombre de la cotización haya cambiado
+      if (values.QuotationName === quotation.QuotationName) {
+        notifications.warning('Por favor, cambia el nombre de la cotización antes de crear una nueva versión');
+        setIsSaving(false);
+        return;
+      }
+      
       notifications.info('Esta cotización ya fue enviada. Creando nueva versión con los cambios actuales...');
       
       try {
         setCreatingVersion(true);
         
-        // 1. Primero crear la nueva versión (copia de la original)
-        const newVersion = await quotationsApi.createVersion(
-          quotationId, 
-          'Versión creada automáticamente al modificar cotización enviada'
-        );
+        // Crear la nueva versión con TODOS los datos del formulario
+        // Esto evita tener que llamar a update() después, lo cual causaba problemas de productos duplicados
+        const newVersion = await quotationsApi.createVersion(quotationId, {
+          versionNotes: 'Versión creada automáticamente al modificar cotización enviada',
+          QuotationName: values.QuotationName,
+          products: values.products
+        });
         
         console.log('Nueva versión creada:', newVersion);
         
-        // 2. Actualizar la nueva versión con los cambios del formulario
-        const updatePayload = {
-          ...values,
-          Id: newVersion.Id // Usar el ID de la nueva versión
-        };
-        
-        const updateResult = await updateQuotation(updatePayload);
-        
-        if (!updateResult.success) {
-          notifications.error('Error al guardar cambios en la nueva versión');
-          console.error('Error actualizando nueva versión:', updateResult.error);
-          return;
-        }
-        
         notifications.success(`Nueva versión ${newVersion.NumberQuotation} creada con tus cambios`);
         
-        // 3. Refrescar cache
+        // Refrescar cache
         await refreshQuotationsCache();
         
-        // 4. Navegar a la nueva versión
+        // Navegar a la nueva versión
         navigate(`/quotations/edit/${newVersion.Id}`);
         
       } catch (versionError: any) {
@@ -226,6 +226,7 @@ const EditQuotation = () => {
         console.error('Error creando versión automática:', versionError);
       } finally {
         setCreatingVersion(false);
+        setIsSaving(false);
       }
       
       return; // Salir después de crear y actualizar la nueva versión
@@ -246,6 +247,8 @@ const EditQuotation = () => {
     } catch (e: any) {
       notifications.error(e?.message || 'Error al actualizar la cotización');
       console.error('Error en actualización:', e);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -300,7 +303,7 @@ const EditQuotation = () => {
       return;
     }
 
-    setSavingAndSending(true);
+    setIsSaving(true);
     
     try {
       let quotationIdToSend = quotationId;
@@ -308,31 +311,24 @@ const EditQuotation = () => {
 
       // Si la cotización ya fue enviada (Estado: "En proceso"), crear nueva versión con los cambios
       if (quotation.Status === 'En proceso') {
+        // Validar que el nombre de la cotización haya cambiado
+        if (values.QuotationName === quotation.QuotationName) {
+          notifications.warning('Por favor, cambia el nombre de la cotización antes de crear una nueva versión');
+          setIsSaving(false);
+          return;
+        }
+        
         notifications.info('Cotización ya enviada. Creando nueva versión con tus cambios...');
         
         try {
-          // 1. Crear nueva versión (copia de la original)
-          const newVersion = await quotationsApi.createVersion(
-            quotationId, 
-            'Versión creada automáticamente al guardar y enviar cotización'
-          );
+          // Crear nueva versión con TODOS los cambios del formulario
+          const newVersion = await quotationsApi.createVersion(quotationId, {
+            versionNotes: 'Versión creada automáticamente al guardar y enviar cotización',
+            QuotationName: values.QuotationName,
+            products: values.products
+          });
           
           console.log('Nueva versión creada:', newVersion);
-          
-          // 2. Actualizar la nueva versión con los cambios del formulario
-          const updatePayload = {
-            ...values,
-            Id: newVersion.Id // Usar el ID de la nueva versión
-          };
-          
-          const updateResult = await updateQuotation(updatePayload);
-          
-          if (!updateResult.success) {
-            notifications.error('Error al guardar cambios en la nueva versión');
-            console.error('Error actualizando nueva versión:', updateResult.error);
-            setSavingAndSending(false);
-            return;
-          }
           
           // Actualizar IDs para enviar la nueva versión
           quotationIdToSend = newVersion.Id;
@@ -343,7 +339,7 @@ const EditQuotation = () => {
         } catch (versionError: any) {
           notifications.error(versionError?.message || 'Error al crear nueva versión');
           console.error('Error creando versión automática:', versionError);
-          setSavingAndSending(false);
+          setIsSaving(false);
           return; // Salir si no se pudo crear la versión
         }
       } else {
@@ -351,7 +347,7 @@ const EditQuotation = () => {
         const updateResult = await updateQuotation(values);
         if (!updateResult.success) {
           notifications.error(updateResult.error || 'Error al guardar la cotización');
-          setSavingAndSending(false);
+          setIsSaving(false);
           return;
         }
       }
@@ -380,7 +376,7 @@ const EditQuotation = () => {
       notifications.error(e?.message || 'Error al guardar y enviar');
       console.error('Error en guardar y enviar:', e);
     } finally {
-      setSavingAndSending(false);
+      setIsSaving(false);
     }
   };
 
@@ -583,6 +579,33 @@ const EditQuotation = () => {
                         label="Cotización #"
                         value={quotation?.NumberQuotation || 'Generado previamente'}
                         InputProps={{ readOnly: true }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 8 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        name="QuotationName"
+                        label="Nombre de la Cotización"
+                        value={values.QuotationName}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={Boolean(touched.QuotationName && errors.QuotationName)}
+                        helperText={touched.QuotationName && errors.QuotationName ? String(errors.QuotationName) : ''}
+                        required
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            name="ShowPaymentInfo"
+                            checked={values.ShowPaymentInfo}
+                            onChange={handleChange}
+                            color="primary"
+                          />
+                        }
+                        label="Mostrar datos bancarios"
                       />
                     </Grid>
                   </Grid>
@@ -1119,21 +1142,22 @@ const EditQuotation = () => {
                   onSaveAndSend={() => handleSaveAndSendEmail(values)}
                   onCopy={handleCopyQuotation}
                   onAuthorize={handleAuthorizeQuotation}
-                  onViewPdf={quotation?.Id ? () => {
-                    // El componente QuotationPdfViewer ya maneja su propio estado
-                    // Solo necesitamos un placeholder aquí
-                  } : undefined}
+                  onViewPdf={quotation?.Id ? () => setOpenPdfViewer(true) : undefined}
+                  isSaving={isSaving}
                   isCopying={copyingQuotation}
                   isAuthorizing={authorizingQuotation}
-                  isSavingAndSending={savingAndSending}
+                  isSavingAndSending={isSaving}
                   disableSaveAndSend={!selectedCustomer?.Email}
                   disableSaveAndSendReason={!selectedCustomer?.Email ? 'El cliente no tiene email registrado' : undefined}
                 />
-                {/* PDF Viewer - mantenerlo fuera para que maneje su propio estado */}
-                {quotation?.Id && (
-                  <Box sx={{ display: 'none' }}>
-                    <QuotationPdfViewer quotationId={quotation.Id} quotationNumber={quotation.NumberQuotation} />
-                  </Box>
+                {/* PDF Viewer */}
+                {quotation?.Id && openPdfViewer && (
+                  <QuotationPdfViewer 
+                    quotationId={quotation.Id} 
+                    quotationNumber={quotation.NumberQuotation}
+                    auto={true}
+                    onClose={() => setOpenPdfViewer(false)}
+                  />
                 )}
               </Grid>
             </Grid>

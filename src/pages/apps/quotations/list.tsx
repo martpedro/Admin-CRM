@@ -42,6 +42,7 @@ import QuotationStatusChip from 'components/quotations/QuotationStatusChip';
 import { Add, Edit, Trash, Eye, SearchNormal1, DocumentDownload, Copy, Clock } from 'iconsax-react';
 import { downloadQuotationExcel } from 'api/quotations';
 import QuotationPdfViewer from 'components/quotations/QuotationPdfViewer';
+import QuotationCatalogViewer from 'components/quotations/QuotationCatalogViewer';
 import SendQuotationEmailDialog from 'components/quotations/SendQuotationEmailDialog';
 import DeleteQuotationDialog from 'components/quotations/DeleteQuotationDialog';
 import VersionsHistoryDialog from 'components/quotations/VersionsHistoryDialog';
@@ -481,6 +482,12 @@ const QuotationsList = () => {
                           quotationNumber={quotation.NumberQuotation}
                           variant="icon"
                           label={intl.formatMessage({ id: 'view-pdf' }) || 'Ver PDF'}
+                        />
+                        <QuotationCatalogViewer
+                          quotationId={quotation.Id}
+                          quotationNumber={quotation.NumberQuotation}
+                          variant="icon"
+                          label="Ver Catálogo"
                         />
                         {/* Mostrar botón "Ver Historial" solo si tiene versiones */}
                         {(quotation.Version > 1 || quotation.BaseQuotationId) && (

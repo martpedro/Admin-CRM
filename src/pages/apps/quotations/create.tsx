@@ -78,6 +78,7 @@ const validationSchema = Yup.object({
   UserId: Yup.number().required('El asesor es requerido'),
   AddressId: Yup.number().required('La dirección es requerida'),
   CompanyId: Yup.number().required('La empresa es requerida'),
+  QuotationName: Yup.string().required('El nombre de la cotización es requerido'),
   AdvancePayment: Yup.string().required('El anticipo es requerido'),
   LiquidationPayment: Yup.string().required('La liquidación es requerida'),
   TimeCredit: Yup.string().required('El tiempo de crédito es requerido'),
@@ -198,6 +199,8 @@ const CreateQuotation = () => {
     UserId: advisors.length > 0 ? (copiedData?.UserId || initialUserId || 0) : 0,
     AddressId: 0,
     CompanyId: copiedData?.CompanyId || 0,
+    QuotationName: copiedData?.QuotationName || '',
+    ShowPaymentInfo: copiedData?.ShowPaymentInfo !== undefined ? copiedData.ShowPaymentInfo : true,
     AdvancePayment: copiedData?.AdvancePayment || '60%',
     LiquidationPayment: copiedData?.LiquidationPayment || '40%',
     TimeCredit: copiedData?.TimeCredit || '0 días',
@@ -498,6 +501,32 @@ const CreateQuotation = () => {
                         label="Cotización #"
                         value={selectedCompany?.QuotationLetter ? `${selectedCompany.QuotationLetter}-` : 'Se generará al crear'}
                         InputProps={{ readOnly: true }}
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 8 }}>
+                      <TextField
+                        fullWidth
+                        size="small"
+                        name="QuotationName"
+                        label="Nombre de la Cotización *"
+                        value={values.QuotationName}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        error={touched.QuotationName && Boolean(errors.QuotationName)}
+                        helperText={touched.QuotationName && errors.QuotationName}
+                        placeholder="Ej: Campaña Navidad 2026"
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, md: 4 }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            name="ShowPaymentInfo"
+                            checked={values.ShowPaymentInfo !== false}
+                            onChange={handleChange}
+                          />
+                        }
+                        label="Mostrar datos bancarios en PDF"
                       />
                     </Grid>
                   </Grid>

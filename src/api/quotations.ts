@@ -132,7 +132,7 @@ export const sendQuotationEmail = async ({
             to,
             cc,
             message,
-            subject: `Cotización ${quotation?.NumberQuotation || `#${quotationId}`} - Regalos Corporativos`,
+            // No enviar subject, dejar que el backend lo genere con NumberQuotation
             htmlTemplate: emailHTML,
             textTemplate: emailText,
             attachPdf: true
@@ -187,6 +187,8 @@ export interface QuotationCreate {
   AddressId: number;
   CompanyId: number;
   Status?: 'Nueva' | 'En proceso' | 'Cerrada';
+  QuotationName: string;
+  ShowPaymentInfo?: boolean;
   products: QuotationProduct[];
 }
 
@@ -200,12 +202,16 @@ export interface QuotationUpdate {
   Tax?: number;
   Total?: number;
   Status?: 'Nueva' | 'En proceso' | 'Cerrada';
+  QuotationName?: string;
+  ShowPaymentInfo?: boolean;
   products?: QuotationProduct[];
 }
 
 export interface Quotation {
   Id: number;
   NumberQuotation: string;
+  QuotationName: string;
+  ShowPaymentInfo: boolean;
   AdvancePayment: string;
   LiquidationPayment: string;
   TimeCredit: string;
@@ -311,6 +317,11 @@ export const quotationsApi = {
     const response = await axiosServices.get(`/api/Quotation/Pdf/${quotationId}`.replace(/\/+/g, '/'), { responseType: 'blob' });
     return response.data as Blob;
   },
+  // Obtener PDF del catálogo
+  getCatalogPdf: async (quotationId: number): Promise<Blob> => {
+    const response = await axiosServices.get(`/api/Quotation/CatalogPdf/${quotationId}`.replace(/\/+/g, '/'), { responseType: 'blob' });
+    return response.data as Blob;
+  },
   // Subir imagen de producto
   uploadProductImage: async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -411,8 +422,8 @@ export const quotationsApi = {
   },
 
   // Create new version of a sent quotation
-  createVersion: async (id: number, versionNotes?: string): Promise<Quotation> => {
-    const response = await axiosServices.post(`${QUOTATIONS_API}/CreateVersion/${id}`, { versionNotes });
+  createVersion: async (id: number, data?: { versionNotes?: string; QuotationName?: string; products?: any[] }): Promise<Quotation> => {
+    const response = await axiosServices.post(`${QUOTATIONS_API}/CreateVersion/${id}`, data || {});
     return response.data?.data ?? response.data?.Message?.data ?? response.data;
   },
 
