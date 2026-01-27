@@ -160,7 +160,7 @@ export const generateQuotationEmailHTML = ({
         
         .footer {
             background-color: #2c3e50;
-            color: white;
+            color: #fff;
             padding: 30px 20px;
             text-align: center;
         }

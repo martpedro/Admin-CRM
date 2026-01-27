@@ -22,7 +22,8 @@ import {
   InputAdornment,
   Tab,
   Tabs,
-  Badge
+  Badge,
+  TablePagination
 } from '@mui/material';
 
 // third-party
@@ -80,6 +81,8 @@ const QuotationsList = () => {
   const [selectedAdvisor, setSelectedAdvisor] = useState<string | number | 'all'>('all');
   const [versionsDialogOpen, setVersionsDialogOpen] = useState(false);
   const [selectedQuotationForHistory, setSelectedQuotationForHistory] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   
   const theme = useTheme();
   const navigate = useNavigate();
@@ -220,6 +223,33 @@ const QuotationsList = () => {
     return filtered;
   }, [quotationsData, searchTerm, showAdvisorFilter, selectedAdvisor]);
 
+  // Aplicar paginación
+  const paginatedQuotations = useMemo(() => {
+    const startIndex = page * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return filteredQuotations.slice(startIndex, endIndex);
+  }, [filteredQuotations, page, rowsPerPage]);
+
+  // Resetear página cuando cambien filtros
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPage(0);
+  };
+
+  const handleTabChange = (newValue: StatusKey) => {
+    setActiveTab(newValue);
+    setPage(0);
+  };
+
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   if (error) {
     return (
       <MainCard>
@@ -237,7 +267,6 @@ const QuotationsList = () => {
     <>
       <Breadcrumbs
         links={[{ title: intl.formatMessage({ id: 'home' }), to: '/' }, { title: intl.formatMessage({ id: 'quotations' }) }]}
-        title
         rightAlign
       />
 
@@ -252,7 +281,7 @@ const QuotationsList = () => {
               </InputAdornment>
             }
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder={intl.formatMessage({ id: 'search-placeholder' })}
             sx={{ flex: 1, minWidth: 200 }}
           />
@@ -279,7 +308,7 @@ const QuotationsList = () => {
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs
             value={activeTab}
-            onChange={(_, newValue) => setActiveTab(newValue)}
+            onChange={(_, newValue) => handleTabChange(newValue)}
             aria-label={intl.formatMessage({ id: 'quotation-filters' })}
             sx={{ px: 2 }}
           >
@@ -302,29 +331,22 @@ const QuotationsList = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>#</TableCell>
                 <TableCell>
                   <FormattedMessage id="quotation-number" />
                 </TableCell>
                 <TableCell>
                   <FormattedMessage id="customer" />
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                   <FormattedMessage id="advisor" />
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                   <FormattedMessage id="company" />
-                </TableCell>
-                <TableCell align="right">
-                  <FormattedMessage id="subtotal" />
-                </TableCell>
-                <TableCell align="right">
-                  <FormattedMessage id="taxes" />
                 </TableCell>
                 <TableCell align="right">
                   <FormattedMessage id="total" />
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                   <FormattedMessage id="date" />
                 </TableCell>
                 <TableCell>
@@ -338,7 +360,7 @@ const QuotationsList = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={11} align="center">
+                  <TableCell colSpan={8} align="center">
                     <Typography>
                       <FormattedMessage id="loading-quotations" />
                     </Typography>
@@ -346,7 +368,7 @@ const QuotationsList = () => {
                 </TableRow>
               ) : filteredQuotations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} align="center">
+                  <TableCell colSpan={8} align="center">
                     <Typography>
                       {searchTerm || activeTab !== 'todas' ? (
                         <FormattedMessage id="no-quotations-found" />
@@ -357,7 +379,7 @@ const QuotationsList = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredQuotations.map((quotation, index) => (
+                paginatedQuotations.map((quotation) => (
                   <TableRow
                     key={quotation.Id}
                     hover
@@ -365,7 +387,6 @@ const QuotationsList = () => {
                       backgroundColor: selectedQuotation === quotation.Id ? alpha(theme.palette.primary.main, 0.1) : 'inherit'
                     }}
                   >
-                    <TableCell>{index + 1}</TableCell>
                     <TableCell>
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Typography variant="subtitle2" color="primary">
@@ -393,29 +414,23 @@ const QuotationsList = () => {
                     <TableCell>
                       <Box>
                         <Typography variant="subtitle2">{quotation.customerName}</Typography>
-                        <Typography variant="caption" color="textSecondary">
+                        <Typography variant="caption" color="textSecondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
                           {quotation.Customer?.Email}
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                       <Typography variant="body2">{quotation.advisorName}</Typography>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                       <Typography variant="body2">{quotation.companyName}</Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Typography variant="body2">${quotation.SubTotal?.toLocaleString('es-CO') || '0'}</Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2">${quotation.Tax?.toLocaleString('es-CO') || '0'}</Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="subtitle2" color="primary">
-                        ${quotation.Total?.toLocaleString('es-CO') || '0'}
+                      <Typography variant="subtitle2" color="primary" fontWeight="bold">
+                        ${quotation.Total?.toLocaleString('es-MX') || '0'}
                       </Typography>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                       <Typography variant="body2">{quotation.formattedDate}</Typography>
                     </TableCell>
                     <TableCell>
@@ -583,6 +598,26 @@ const QuotationsList = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        
+        <TablePagination
+          rowsPerPageOptions={[10, 25, 50, 100]}
+          component="div"
+          count={filteredQuotations.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          labelRowsPerPage="Filas por página:"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+          sx={{
+            borderTop: 1,
+            borderColor: 'divider',
+            '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
+              marginTop: 2,
+              marginBottom: 2
+            }
+          }}
+        />
       </MainCard>
 
       <DeleteQuotationDialog
