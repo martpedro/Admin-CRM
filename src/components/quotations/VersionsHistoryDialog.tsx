@@ -26,7 +26,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 // project imports
-import { quotationsApi, Quotation, refreshQuotationsCache } from 'api/quotations';
+import { quotationsApi, Quotation, refreshQuotationsCache, downloadQuotationExcel } from 'api/quotations';
 import QuotationStatusChip from './QuotationStatusChip';
 import QuotationPdfViewer from './QuotationPdfViewer';
 import { useQuotationOperations } from 'hooks/useQuotations';
@@ -91,7 +91,7 @@ const VersionsHistoryDialog = ({ open, onClose, quotationId }: VersionsHistoryDi
   const handleAuthorize = async (versionId: number) => {
     setAuthorizingId(versionId);
     try {
-      const result = await updateQuotationStatus(versionId, 'En proceso');
+      const result = await updateQuotationStatus(versionId, 'Cerrada');
       if (result.success) {
         notifications.success('Cotización autorizada exitosamente');
         await refreshQuotationsCache(versionId);
@@ -102,6 +102,16 @@ const VersionsHistoryDialog = ({ open, onClose, quotationId }: VersionsHistoryDi
       notifications.error('Error al autorizar la cotización');
     } finally {
       setAuthorizingId(null);
+    }
+  };
+
+  const handleDownloadExcel = async (versionId: number, quotationNumber: string) => {
+    try {
+      await downloadQuotationExcel(versionId, quotationNumber);
+      notifications.success('Excel descargado exitosamente');
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      notifications.error('Error al descargar el Excel');
     }
   };
 
@@ -194,6 +204,15 @@ const VersionsHistoryDialog = ({ open, onClose, quotationId }: VersionsHistoryDi
                           variant="icon"
                           label="Ver PDF"
                         />
+                        <Tooltip title="Descargar Excel">
+                          <IconButton 
+                            color="info" 
+                            size="small"
+                            onClick={() => handleDownloadExcel(version.Id, version.NumberQuotation)}
+                          >
+                            <DocumentDownload size={18} />
+                          </IconButton>
+                        </Tooltip>
                         {version.Status === 'En proceso' && (
                           <Tooltip title="Autorizar cotización">
                             <IconButton 

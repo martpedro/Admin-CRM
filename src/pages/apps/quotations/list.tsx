@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // material-ui
@@ -76,6 +76,7 @@ const QuotationsList = () => {
   const [deleting, setDeleting] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<StatusKey>('todas');
   const [statusChangeLoading, setStatusChangeLoading] = useState<number | null>(null);
   const [selectedAdvisor, setSelectedAdvisor] = useState<string | number | 'all'>('all');
@@ -88,8 +89,25 @@ const QuotationsList = () => {
   const navigate = useNavigate();
   const intl = useIntl();
   
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPage(0); // Reset page cuando cambie el término de búsqueda
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  
   const statusFilter = activeTab === 'todas' ? undefined : activeTab;
-  const { quotations, isLoading, error } = useQuotations(statusFilter);
+  
+  // Llamar al hook con los filtros actuales - el API hace la búsqueda
+  const { quotations, isLoading, error } = useQuotations(
+    statusFilter, 
+    debouncedSearchTerm,
+    selectedAdvisor
+  );
+  
   const { deleteQuotation, updateQuotationStatus } = useQuotationOperations();
 
   // Función para cambiar estado de cotización
@@ -163,27 +181,34 @@ const QuotationsList = () => {
   };
 
   const quotationsData = useMemo(() => {
-    return quotations.map((quotation: Quotation) => ({
+    // Solo filtrar últimas versiones si NO hay búsqueda activa
+    // Cuando hay búsqueda, mostrar todas las versiones (el backend ya las filtra)
+    const filteredQuotations = debouncedSearchTerm 
+      ? quotations 
+      : quotations.filter(q => q.IsLatestVersion !== false);
+    
+    return filteredQuotations.map((quotation: Quotation) => ({
       ...quotation,
       customerName: `${quotation.Customer?.Name || ''} ${quotation.Customer?.LastName || ''}`.trim(),
       advisorName: `${quotation.User?.Name || ''} ${quotation.User?.LastNAme || ''}`.trim(),
       companyName: quotation.Company?.Name || '',
       formattedDate: format(new Date(quotation.CreatedAt), 'dd/MM/yyyy', { locale: es })
     }));
-  }, [quotations]);
+  }, [quotations, debouncedSearchTerm]);
 
   // Calcular conteos para tabs usando hook separado para cada estado
-  const { quotations: allQuotations } = useQuotations();
-  const { quotations: newQuotations } = useQuotations('Nueva');
-  const { quotations: inProcessQuotations } = useQuotations('En proceso'); 
-  const { quotations: closedQuotations } = useQuotations('Cerrada');
+  // No incluir filtros de búsqueda/asesor para los contadores
+  const { quotations: allQuotations } = useQuotations(undefined, '', 'all');
+  const { quotations: newQuotations } = useQuotations('Nueva', '', 'all');
+  const { quotations: inProcessQuotations } = useQuotations('En proceso', '', 'all'); 
+  const { quotations: closedQuotations } = useQuotations('Cerrada', '', 'all');
 
   const statusCounts = useMemo(() => ({
-    todas: allQuotations.length,
-    Nueva: newQuotations.length,
-    'En proceso': inProcessQuotations.length,
-    Cerrada: closedQuotations.length
-  }), [allQuotations.length, newQuotations.length, inProcessQuotations.length, closedQuotations.length]);
+    todas: allQuotations.filter(q => q.IsLatestVersion !== false).length,
+    Nueva: newQuotations.filter(q => q.IsLatestVersion !== false).length,
+    'En proceso': inProcessQuotations.filter(q => q.IsLatestVersion !== false).length,
+    Cerrada: closedQuotations.filter(q => q.IsLatestVersion !== false).length
+  }), [allQuotations, newQuotations, inProcessQuotations, closedQuotations]);
 
   // Crear tabs con conteos
   const statusTabs: StatusTab[] = [
@@ -193,51 +218,28 @@ const QuotationsList = () => {
     { key: 'Cerrada', label: 'Cerradas', count: statusCounts.Cerrada }
   ];
 
-  // Filtrar cotizaciones por búsqueda y asesor
-  const filteredQuotations = useMemo(() => {
-    // Primero filtrar solo las últimas versiones (IsLatestVersion !== false)
-    // Esto evita mostrar versiones anteriores en el listado principal
-    let filtered = quotationsData.filter(q => q.IsLatestVersion !== false);
+  // Ya no necesitamos filtrado local - el API hace todo el trabajo
 
-    // Aplicar filtro por asesor según permisos
-    if (showAdvisorFilter && selectedAdvisor !== 'all') {
-      filtered = filtered.filter(quotation => {
-        const advisorId = quotation.User?.Id;
-        return advisorId === selectedAdvisor;
-      });
-    }
-
-    // Filtrar por búsqueda
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (quotation) =>
-          quotation.NumberQuotation?.toLowerCase().includes(term) ||
-          quotation.customerName.toLowerCase().includes(term) ||
-          quotation.advisorName.toLowerCase().includes(term) ||
-          quotation.companyName.toLowerCase().includes(term) ||
-          quotation.Customer?.Email?.toLowerCase().includes(term)
-      );
-    }
-
-    return filtered;
-  }, [quotationsData, searchTerm, showAdvisorFilter, selectedAdvisor]);
-
-  // Aplicar paginación
+  // Aplicar paginación directamente a quotationsData
   const paginatedQuotations = useMemo(() => {
     const startIndex = page * rowsPerPage;
     const endIndex = startIndex + rowsPerPage;
-    return filteredQuotations.slice(startIndex, endIndex);
-  }, [filteredQuotations, page, rowsPerPage]);
+    return quotationsData.slice(startIndex, endIndex);
+  }, [quotationsData, page, rowsPerPage]);
 
   // Resetear página cuando cambien filtros
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    setPage(0);
+    // El debounce en useEffect se encarga de actualizar debouncedSearchTerm y resetear page
   };
 
   const handleTabChange = (newValue: StatusKey) => {
     setActiveTab(newValue);
+    setPage(0);
+  };
+  
+  const handleAdvisorChange = (advisorId: string | number | 'all') => {
+    setSelectedAdvisor(advisorId);
     setPage(0);
   };
 
@@ -289,7 +291,7 @@ const QuotationsList = () => {
           <AdvisorFilter
             module="quotation"
             selectedAdvisor={selectedAdvisor}
-            onAdvisorChange={setSelectedAdvisor}
+            onAdvisorChange={handleAdvisorChange}
           />
         </Stack>
 
@@ -366,11 +368,11 @@ const QuotationsList = () => {
                     </Typography>
                   </TableCell>
                 </TableRow>
-              ) : filteredQuotations.length === 0 ? (
+              ) : quotationsData.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} align="center">
                     <Typography>
-                      {searchTerm || activeTab !== 'todas' ? (
+                      {searchTerm || activeTab !== 'todas' || selectedAdvisor !== 'all' ? (
                         <FormattedMessage id="no-quotations-found" />
                       ) : (
                         <FormattedMessage id="no-quotations-registered" />
@@ -602,7 +604,7 @@ const QuotationsList = () => {
         <TablePagination
           rowsPerPageOptions={[10, 25, 50, 100]}
           component="div"
-          count={filteredQuotations.length}
+          count={quotationsData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

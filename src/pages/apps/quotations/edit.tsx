@@ -215,6 +215,10 @@ const EditQuotation = () => {
         
         notifications.success(`Nueva versión ${newVersion.NumberQuotation} creada con tus cambios`);
         
+        // Esperar para asegurar que la transacción se complete
+        console.log('⏳ Esperando a que se complete la inserción de productos...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         // Refrescar cache
         await refreshQuotationsCache();
         
@@ -335,6 +339,10 @@ const EditQuotation = () => {
           quotationNumberToSend = newVersion.NumberQuotation;
           
           notifications.success(`Nueva versión ${quotationNumberToSend} creada con tus cambios`);
+          
+          // Esperar 800ms para asegurar que la transacción se complete en la base de datos
+          console.log('⏳ Esperando a que se complete la inserción de productos...');
+          await new Promise(resolve => setTimeout(resolve, 800));
           
         } catch (versionError: any) {
           notifications.error(versionError?.message || 'Error al crear nueva versión');

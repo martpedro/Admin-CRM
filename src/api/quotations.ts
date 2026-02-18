@@ -7,6 +7,13 @@ import { defaultCompanyConfig } from 'config/companyConfig';
 
 const QUOTATIONS_API = '/api/Quotation';
 
+// Tipos
+export interface QuotationFilters {
+  status?: string;
+  search?: string;
+  advisorId?: number | string;
+}
+
 /**
  * Función general para invalidar cache de cotizaciones
  * Refresca todas las listas de cotizaciones y datos específicos
@@ -59,7 +66,7 @@ export const refreshQuotationsCache = async (quotationId?: number) => {
   });
 };
 // Descargar Excel de cotización
-export const downloadQuotationExcel = async (quotationId: number): Promise<void> => {
+export const downloadQuotationExcel = async (quotationId: number, quotationNumber?: string): Promise<void> => {
   // Crear un enlace temporal para descargar el archivo
   try {
     const response = await axiosServices.get(`/api/Quotation/DownloadExcel/${quotationId}`.replace(/\/+/g, '/'), {
@@ -68,8 +75,9 @@ export const downloadQuotationExcel = async (quotationId: number): Promise<void>
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
-    // Nombre sugerido para el archivo
-    link.setAttribute('download', `Cotizacion_${quotationId}.xlsx`);
+    // Nombre sugerido para el archivo - usar número de cotización si está disponible
+    const fileName = quotationNumber ? `Cotizacion_${quotationNumber}.xlsx` : `Cotizacion_${quotationId}.xlsx`;
+    link.setAttribute('download', fileName);
     document.body.appendChild(link);
     link.click();
     link.parentNode?.removeChild(link);
@@ -337,9 +345,15 @@ export const quotationsApi = {
     const list = Array.isArray(response.data) ? response.data : response.data?.Message || [];
     return list;
   },
-  // Get all quotations with optional status filter
-  getAll: async (status?: string): Promise<Quotation[]> => {
-    const url = status ? `${QUOTATIONS_API}/Get?status=${encodeURIComponent(status)}` : `${QUOTATIONS_API}/Get`;
+  // Get all quotations with optional filters
+  getAll: async (status?: string, search?: string, advisorId?: number | string): Promise<Quotation[]> => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', encodeURIComponent(status));
+    if (search && search.trim()) params.append('search', encodeURIComponent(search.trim()));
+    if (advisorId && advisorId !== 'all') params.append('advisorId', String(advisorId));
+    
+    const queryString = params.toString();
+    const url = queryString ? `${QUOTATIONS_API}/Get?${queryString}` : `${QUOTATIONS_API}/Get`;
     const response = await axiosServices.get(url);
     const data = response.data?.Message ?? response.data;
     return Array.isArray(data) ? data : [];

@@ -1,14 +1,19 @@
 import useSWR, { mutate as globalMutate } from 'swr';
 import { quotationsApi, Quotation, refreshQuotationsCache } from '../api/quotations';
 
-// Hook para obtener todas las cotizaciones con filtro opcional por estado
-export const useQuotations = (status?: string) => {
+// Hook para obtener todas las cotizaciones con filtros opcionales
+export const useQuotations = (status?: string, search?: string, advisorId?: number | string) => {
+  // Construir clave única para SWR basada en los parámetros
+  const cacheKey = ['quotation:list', status, search, advisorId].filter(Boolean).join(':');
+  
   const { data, error, isLoading, mutate } = useSWR<Quotation[]>(
-    status ? `quotation:list:${status}` : 'quotation:list',
-    () => quotationsApi.getAll(status),
+    cacheKey,
+    () => quotationsApi.getAll(status, search, advisorId),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
+      // Configurar debounce implícito con dedupingInterval
+      dedupingInterval: 300, // 300ms de debounce
     }
   );
 
