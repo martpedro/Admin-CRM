@@ -46,3 +46,69 @@ export interface PaymentConfiguration {
   CreatedAt?: string;
   UpdatedAt?: string;
 }
+
+// Nuevos tipos para sistema de múltiples cuentas bancarias
+export interface PaymentMethodsConfig {
+  CompanyId: number;
+  AcceptedPaymentMethods?: AcceptedPaymentMethods;
+  AcceptedCards?: AcceptedCards;
+  PaymentNotes?: string;
+  ShowInQuotation?: boolean;
+  CreatedAt?: string;
+  UpdatedAt?: string;
+}
+
+export interface BankAccount {
+  Id?: number;
+  CompanyId: number;
+  BankName: string;
+  AccountNumber?: string;
+  ClaveInterbancaria?: string;
+  AccountHolder?: string;
+  BankBranch?: string;
+  SwiftCode?: string;
+  Currency?: 'MXN' | 'USD' | 'EUR' | 'CAD' | 'GBP';
+  AccountType?: 'Cheques' | 'Ahorro' | 'Inversión' | 'Nómina' | 'Empresarial';
+  IsPreferred?: boolean;
+  DisplayOrder?: number;
+  Notes?: string;
+  IsActive?: boolean;
+  CreatedAt?: string;
+  UpdatedAt?: string;
+}
+
+export interface CreateBankAccountDto {
+  CompanyId: number;
+  BankName: string;
+  AccountNumber?: string;
+  ClaveInterbancaria?: string;
+  AccountHolder?: string;
+  BankBranch?: string;
+  SwiftCode?: string;
+  Currency?: string;
+  AccountType?: string;
+  IsPreferred?: boolean;
+  DisplayOrder?: number;
+  Notes?: string;
+}
+
+export interface UpdateBankAccountDto {
+  BankName?: string;
+  AccountNumber?: string;
+  ClaveInterbancaria?: string;
+  AccountHolder?: string;
+  BankBranch?: string;
+  SwiftCode?: string;
+  Currency?: string;
+  AccountType?: string;
+  IsPreferred?: boolean;
+  DisplayOrder?: number;
+  Notes?: string;
+}
+
+export interface UpdateDisplayOrderDto {
+  accounts: Array<{
+    Id: number;
+    DisplayOrder: number;
+  }>;
+}

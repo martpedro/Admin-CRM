@@ -23,6 +23,7 @@ import {
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { PaymentConfiguration, AcceptedPaymentMethods, AcceptedCards } from 'types/company';
+import BankAccountsManager from 'components/company/BankAccountsManager';
 
 interface PaymentConfigModalProps {
   open: boolean;
@@ -164,109 +165,18 @@ export default function PaymentConfigModal({ open, onClose, companyId, companyNa
               </Alert>
 
               <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)} sx={{ mb: 2 }}>
-                <Tab label="Datos Bancarios" />
+                <Tab label="Cuentas Bancarias" />
                 <Tab label="Métodos de Pago" />
                 <Tab label="Tarjetas Aceptadas" />
+                <Tab label="Datos Legacy" />
               </Tabs>
 
-              {/* Tab 1: Datos Bancarios */}
+              {/* Tab 1: Cuentas Bancarias (Nuevo Sistema) */}
               <TabPanel value={tabValue} index={0}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Nombre del Banco"
-                      name="BankName"
-                      value={values.BankName}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.BankName && Boolean(errors.BankName)}
-                      helperText={touched.BankName && errors.BankName}
-                      placeholder="Ej: BBVA México"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Número de Cuenta"
-                      name="AccountNumber"
-                      value={values.AccountNumber}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.AccountNumber && Boolean(errors.AccountNumber)}
-                      helperText={touched.AccountNumber && errors.AccountNumber}
-                      placeholder="0123456789"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="CLABE Interbancaria"
-                      name="ClaveInterbancaria"
-                      value={values.ClaveInterbancaria}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.ClaveInterbancaria && Boolean(errors.ClaveInterbancaria)}
-                      helperText={touched.ClaveInterbancaria && errors.ClaveInterbancaria}
-                      placeholder="012345678901234567"
-                      inputProps={{ maxLength: 18 }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Beneficiario"
-                      name="AccountHolder"
-                      value={values.AccountHolder}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.AccountHolder && Boolean(errors.AccountHolder)}
-                      helperText={touched.AccountHolder && errors.AccountHolder}
-                      placeholder="Nombre completo del beneficiario"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Sucursal"
-                      name="BankBranch"
-                      value={values.BankBranch}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.BankBranch && Boolean(errors.BankBranch)}
-                      helperText={touched.BankBranch && errors.BankBranch}
-                      placeholder="Sucursal Centro"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Código SWIFT (Opcional)"
-                      name="SwiftCode"
-                      value={values.SwiftCode}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.SwiftCode && Boolean(errors.SwiftCode)}
-                      helperText={touched.SwiftCode && errors.SwiftCode}
-                      placeholder="Para transferencias internacionales"
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={3}
-                      label="Notas Adicionales"
-                      name="PaymentNotes"
-                      value={values.PaymentNotes}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={touched.PaymentNotes && Boolean(errors.PaymentNotes)}
-                      helperText={touched.PaymentNotes && errors.PaymentNotes}
-                      placeholder="Ej: Descuento del 3% en pagos por transferencia"
-                    />
-                  </Grid>
-                </Grid>
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  <strong>Sistema Nuevo:</strong> Gestione múltiples cuentas bancarias con soporte para diferentes monedas y tipos de cuenta.
+                </Alert>
+                <BankAccountsManager companyId={companyId} />
               </TabPanel>
 
               {/* Tab 2: Métodos de Pago */}
@@ -405,6 +315,109 @@ export default function PaymentConfigModal({ open, onClose, companyId, companyNa
                         />
                       ))}
                     </Stack>
+                  </Grid>
+                </Grid>
+              </TabPanel>
+
+              {/* Tab 4: Datos Bancarios Legacy (Sistema Antiguo) */}
+              <TabPanel value={tabValue} index={3}>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  <strong>Sistema Legacy:</strong> Esta configuración es para compatibilidad con el sistema anterior. Se recomienda usar el nuevo sistema de "Cuentas Bancarias" que soporta múltiples cuentas.
+                </Alert>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Nombre del Banco"
+                      name="BankName"
+                      value={values.BankName}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.BankName && Boolean(errors.BankName)}
+                      helperText={touched.BankName && errors.BankName}
+                      placeholder="Ej: BBVA México"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Número de Cuenta"
+                      name="AccountNumber"
+                      value={values.AccountNumber}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.AccountNumber && Boolean(errors.AccountNumber)}
+                      helperText={touched.AccountNumber && errors.AccountNumber}
+                      placeholder="0123456789"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="CLABE Interbancaria"
+                      name="ClaveInterbancaria"
+                      value={values.ClaveInterbancaria}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.ClaveInterbancaria && Boolean(errors.ClaveInterbancaria)}
+                      helperText={touched.ClaveInterbancaria && errors.ClaveInterbancaria}
+                      placeholder="012345678901234567"
+                      inputProps={{ maxLength: 18 }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Beneficiario"
+                      name="AccountHolder"
+                      value={values.AccountHolder}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.AccountHolder && Boolean(errors.AccountHolder)}
+                      helperText={touched.AccountHolder && errors.AccountHolder}
+                      placeholder="Nombre completo del beneficiario"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Sucursal"
+                      name="BankBranch"
+                      value={values.BankBranch}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.BankBranch && Boolean(errors.BankBranch)}
+                      helperText={touched.BankBranch && errors.BankBranch}
+                      placeholder="Sucursal Centro"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField
+                      fullWidth
+                      label="Código SWIFT (Opcional)"
+                      name="SwiftCode"
+                      value={values.SwiftCode}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.SwiftCode && Boolean(errors.SwiftCode)}
+                      helperText={touched.SwiftCode && errors.SwiftCode}
+                      placeholder="Para transferencias internacionales"
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      label="Notas Adicionales"
+                      name="PaymentNotes"
+                      value={values.PaymentNotes}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      error={touched.PaymentNotes && Boolean(errors.PaymentNotes)}
+                      helperText={touched.PaymentNotes && errors.PaymentNotes}
+                      placeholder="Ej: Descuento del 3% en pagos por transferencia"
+                    />
                   </Grid>
                 </Grid>
               </TabPanel>
