@@ -62,6 +62,7 @@ const SendQuotationEmailDialog: React.FC<SendQuotationEmailDialogProps> = ({
   };
 
   return (
+    <>
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Enviar cotización por correo</DialogTitle>
       <DialogContent>
@@ -117,6 +118,7 @@ const SendQuotationEmailDialog: React.FC<SendQuotationEmailDialogProps> = ({
         <Button onClick={onClose} disabled={loading}>Cancelar</Button>
         <Button variant="contained" onClick={handleSend} disabled={loading}>Enviar</Button>
       </DialogActions>
+    </Dialog>
       {confirm && (
         <Dialog open={confirm} onClose={handleCancelConfirm}>
           <DialogTitle>Confirmar envío</DialogTitle>
@@ -139,7 +141,7 @@ const SendQuotationEmailDialog: React.FC<SendQuotationEmailDialogProps> = ({
           customMessage={message}
         />
       )}
-    </Dialog>
+    </>
   );
 };
 

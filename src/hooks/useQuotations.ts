@@ -1,6 +1,12 @@
 import useSWR, { mutate as globalMutate } from 'swr';
 import { quotationsApi, Quotation, refreshQuotationsCache } from '../api/quotations';
 
+const isQuotationListKey = (key: unknown) => {
+  if (typeof key === 'string') return key.startsWith('quotation:list');
+  if (Array.isArray(key) && key.length > 0) return key[0] === 'quotation:list';
+  return false;
+};
+
 // Hook para obtener todas las cotizaciones con filtros opcionales
 export const useQuotations = (status?: string, search?: string, advisorId?: number | string) => {
   // Construir clave única para SWR basada en los parámetros
@@ -97,7 +103,7 @@ export const useQuotationOperations = () => {
     try {
       const result = await quotationsApi.updateStatus(id, status);
       // Invalidar todas las listas de cotizaciones (con y sin filtros)
-      await globalMutate(/^quotation:list/);
+      await globalMutate(isQuotationListKey);
       return { success: true, data: result };
     } catch (error: any) {
       console.error('Error updating quotation status:', error);

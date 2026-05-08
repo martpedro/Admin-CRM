@@ -122,8 +122,6 @@ export function useGetAllUsers() {
 // Función específica para obtener usuarios activos como asesores de ventas
 export async function getSalesAdvisors() {
   try {
-    console.log('Iniciando petición a /api/user/list...');
-    
     const response = await axiosServices.get('/api/user/list', {
       headers: {
         'Content-Type': 'application/json',
@@ -137,11 +135,8 @@ export async function getSalesAdvisors() {
       }
     });
     
-    console.log('Respuesta recibida:', response.status, response.data);
-    
     // Si es 204, retornar array vacío
     if (response.status === 204 || !response.data) {
-      console.log('Respuesta 204 o sin datos - retornando array vacío');
       return {
         success: true,
         data: []
@@ -150,7 +145,6 @@ export async function getSalesAdvisors() {
     
     // Corregir: La respuesta viene en Message[0], no en Message
     const users = response.data?.Message?.[0] as ApiUser[] || [];
-    console.log('Usuarios obtenidos:', users);
     
     // Filtrar solo usuarios activos que puedan ser asesores de ventas
     const advisors = users.filter(user => user.isActive === true);
@@ -184,14 +178,6 @@ export async function insertUser(newUser: UserList, avatarFile?: File) {
   const isActive = !((newUser as any).isInactive === true);
   const profile = (newUser as any).profile || 1;
   const password = (newUser as any).password || '123456';
-
-  // Log para depuración
-  console.log('Datos mapeados para insertUser:', {
-    firstName, lastName, middleName, email, phone, letterAsign, 
-    isActive, profile, password: password ? '[HIDDEN]' : 'NO PASSWORD',
-    isInactive: (newUser as any).isInactive,
-    originalProfile: (newUser as any).profile
-  });
 
   formData.append('Name', String(firstName).trim());
   formData.append('LastNAme', `${String(lastName).trim()} ${String(middleName).trim()}`.trim());
@@ -230,14 +216,6 @@ export async function updateUser(UserId: number, updatedUser: UserList, avatarFi
   const isActive = !((updatedUser as any).isInactive === true);
   const profile = (updatedUser as any).profile || 1;
   const password = (updatedUser as any).password || (updatedUser as any)['password'] || '';
-
-  // Log para depuración
-  console.log('Datos mapeados para updateUser:', {
-    UserId, firstName, lastName, middleName, email, phone, letterAsign, 
-    isActive, profile, password: password ? '[HIDDEN]' : 'NO PASSWORD',
-    isInactive: (updatedUser as any).isInactive,
-    originalProfile: (updatedUser as any).profile
-  });
 
   formData.append('Id', String(UserId));
   formData.append('Name', String(firstName).trim());

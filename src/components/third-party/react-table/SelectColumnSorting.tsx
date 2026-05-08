@@ -1,4 +1,4 @@
-import { SetStateAction, useState } from 'react';
+import { SetStateAction, useEffect, useMemo, useState } from 'react';
 
 // material-ui
 import FormControl from '@mui/material/FormControl';
@@ -23,6 +23,29 @@ interface Props {
 
 export default function SelectColumnSorting({ sortBy, getAllColumns, setSorting }: Props) {
   const [sort, setSort] = useState<string>(sortBy || '');
+
+  const sortableColumnIds = useMemo(
+    () =>
+      getAllColumns()
+        .filter(
+          (column) =>
+            // @ts-ignore
+            column.columnDef.accessorKey && column.getCanSort()
+        )
+        .map((column) => column.id),
+    [getAllColumns]
+  );
+
+  useEffect(() => {
+    if (sortBy && sortableColumnIds.includes(sortBy)) {
+      setSort(sortBy);
+      return;
+    }
+
+    if (!sortableColumnIds.includes(sort)) {
+      setSort('');
+    }
+  }, [sortBy, sort, sortableColumnIds]);
 
   const handleChange = (event: SelectChangeEvent<string>) => {
     const {

@@ -277,7 +277,7 @@ const EditQuotation = () => {
     
     setAuthorizingQuotation(true);
     try {
-      const result = await updateQuotationStatus(quotationId, 'En proceso');
+      const result = await updateQuotationStatus(quotationId, 'Cerrada');
       
       if (result.success) {
         notifications.success('Cotización autorizada exitosamente');

@@ -7,6 +7,12 @@ import { defaultCompanyConfig } from 'config/companyConfig';
 
 const QUOTATIONS_API = '/api/Quotation';
 
+const isQuotationListKey = (key: unknown) => {
+  if (typeof key === 'string') return key.startsWith('quotation:list');
+  if (Array.isArray(key) && key.length > 0) return key[0] === 'quotation:list';
+  return false;
+};
+
 // Tipos
 export interface QuotationFilters {
   status?: string;
@@ -34,7 +40,7 @@ export const refreshQuotationsCache = async (quotationId?: number) => {
       try {
         // Crear promesas para ejecutar en paralelo y reducir tiempo de bloqueo
         const promises = [
-          mutate(/^quotation:list/),
+          mutate(isQuotationListKey),
           mutate('quotation:list'),
           mutate('quotation:list:Nueva'),
           mutate('quotation:list:En proceso'),
@@ -256,7 +262,14 @@ export interface Quotation {
   Company: {
     Id: number;
     Name: string;
+    LegalName?: string;
     QuotationLetter: string;
+    Phones?: string;
+    WhatsApp?: string;
+    WebPage?: string;
+    Address?: string;
+    Email?: string;
+    Logo?: string;
   };
   products: QuotationProduct[];
   CreatedAt: string;
@@ -348,8 +361,8 @@ export const quotationsApi = {
   // Get all quotations with optional filters
   getAll: async (status?: string, search?: string, advisorId?: number | string): Promise<Quotation[]> => {
     const params = new URLSearchParams();
-    if (status) params.append('status', encodeURIComponent(status));
-    if (search && search.trim()) params.append('search', encodeURIComponent(search.trim()));
+    if (status) params.append('status', status);
+    if (search && search.trim()) params.append('search', search.trim());
     if (advisorId && advisorId !== 'all') params.append('advisorId', String(advisorId));
     
     const queryString = params.toString();

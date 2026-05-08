@@ -65,6 +65,12 @@ interface StatusTab {
   count: number;
 }
 
+const isQuotationListKey = (key: unknown) => {
+  if (typeof key === 'string') return key.startsWith('quotation:list');
+  if (Array.isArray(key) && key.length > 0) return key[0] === 'quotation:list';
+  return false;
+};
+
 const QuotationsList = () => {
   const { showAdvisorFilter, canViewAll, dataScope } = useQuotationDataScope();
   
@@ -556,43 +562,6 @@ const QuotationsList = () => {
                           </IconButton>
                         </Tooltip>
                       </Stack>
-                      <SendQuotationEmailDialog
-                        open={openSendEmail}
-                        onClose={() => {
-                          setOpenSendEmail(false);
-                          setQuotationToSend(null);
-                        }}
-                        loading={sendingEmail}
-                        defaultTo={quotationToSend?.Customer?.Email || ''}
-                        quotation={quotationToSend || undefined}
-                        onSend={async ({ to, cc, message }) => {
-                          if (!quotationToSend) return;
-                          setSendingEmail(true);
-                          try {
-                            await sendQuotationEmail({
-                              quotationId: quotationToSend.Id,
-                              to,
-                              cc,
-                              message,
-                              quotation: quotationToSend
-                            });
-                            setOpenSendEmail(false);
-                            setQuotationToSend(null);
-                            
-                            // Refrescar todas las listas de cotizaciones usando las claves correctas de SWR
-                            mutate('quotation:list');
-                            mutate('quotation:list:Nueva');
-                            mutate('quotation:list:En proceso');
-                            mutate('quotation:list:Cerrada');
-                            
-                            openSnackbar({ open: true, message: 'Correo enviado correctamente', variant: 'alert', alert: { color: 'success' } } as SnackbarProps);
-                          } catch (err: any) {
-                            openSnackbar({ open: true, message: 'Error al enviar el correo', variant: 'alert', alert: { color: 'error' } } as SnackbarProps);
-                          } finally {
-                            setSendingEmail(false);
-                          }
-                        }}
-                      />
                     </TableCell>
                   </TableRow>
                 ))
@@ -628,6 +597,38 @@ const QuotationsList = () => {
         onConfirm={confirmDelete}
         quotationNumber={quotationToDelete?.NumberQuotation}
         loading={deleting}
+      />
+
+      <SendQuotationEmailDialog
+        open={openSendEmail}
+        onClose={() => {
+          setOpenSendEmail(false);
+          setQuotationToSend(null);
+        }}
+        loading={sendingEmail}
+        defaultTo={quotationToSend?.Customer?.Email || ''}
+        quotation={quotationToSend || undefined}
+        onSend={async ({ to, cc, message }) => {
+          if (!quotationToSend) return;
+          setSendingEmail(true);
+          try {
+            await sendQuotationEmail({
+              quotationId: quotationToSend.Id,
+              to,
+              cc,
+              message,
+              quotation: quotationToSend
+            });
+            setOpenSendEmail(false);
+            setQuotationToSend(null);
+            mutate(isQuotationListKey);
+            openSnackbar({ open: true, message: 'Correo enviado correctamente', variant: 'alert', alert: { color: 'success' } } as SnackbarProps);
+          } catch (err: any) {
+            openSnackbar({ open: true, message: 'Error al enviar el correo', variant: 'alert', alert: { color: 'error' } } as SnackbarProps);
+          } finally {
+            setSendingEmail(false);
+          }
+        }}
       />
 
       <VersionsHistoryDialog

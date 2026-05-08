@@ -41,6 +41,48 @@ const endpoints = {
   delete: '/delete' // server URL
 };
 
+const getCachedCustomers = (cache: any): CustomerList[] => {
+  if (Array.isArray(cache?.Message?.data)) {
+    return cache.Message.data;
+  }
+
+  if (Array.isArray(cache?.data)) {
+    return cache.data;
+  }
+
+  if (Array.isArray(cache?.customers)) {
+    return cache.customers;
+  }
+
+  return [];
+};
+
+const updateCustomerCache = (cache: any, customers: CustomerList[]) => {
+  if (cache?.Message && typeof cache.Message === 'object') {
+    return {
+      ...cache,
+      Message: {
+        ...cache.Message,
+        data: customers,
+        total: customers.length
+      }
+    };
+  }
+
+  if (cache && typeof cache === 'object') {
+    return {
+      ...cache,
+      data: customers,
+      total: customers.length
+    };
+  }
+
+  return {
+    data: customers,
+    total: customers.length
+  };
+};
+
 export function useGetCustomer() {
   const { data, isLoading, error, isValidating } = useSWR(endpoints.key + endpoints.list, fetcher, {
     revalidateIfStale: false,
@@ -49,18 +91,17 @@ export function useGetCustomer() {
   });
 
   // Ajustar para obtener los datos desde data.data
-  const customers = data?.Message?.data as CustomerList[] || [];
+  const customers = getCachedCustomers(data);
   const usersLoading = isLoading;
-  console.log("Datos de los clientes", customers);
   const memoizedValue = useMemo(
     () => ({
       customers,
       usersLoading,
       customersError: error,
       customersValidating: isValidating,
-      customersEmpty: !isLoading && (!data?.data || data.data.length === 0)
+      customersEmpty: !isLoading && customers.length === 0
     }),
-    [data, error, isLoading, isValidating]
+    [customers, error, isLoading, isValidating]
   );
 
   return memoizedValue;
@@ -96,12 +137,12 @@ export async function insertCustomer(newCustomer: CustomerList) {
       endpoints.key + endpoints.list,
       (currentCustomer: any) => {
         const customerData = response.data?.Message?.customer || response.data;
-        const customerWithId = { ...newCustomer, id: customerData.id || customerData.Id || (currentCustomer.customers.length + 1) };
-        const addedCustomer: CustomerList[] = [...currentCustomer.customers, customerWithId];
-        return {
-          ...currentCustomer,
-          customers: addedCustomer
+        const currentCustomers = getCachedCustomers(currentCustomer);
+        const customerWithId = {
+          ...newCustomer,
+          Id: customerData.id || customerData.Id || (currentCustomers.length + 1)
         };
+        return updateCustomerCache(currentCustomer, [...currentCustomers, customerWithId]);
       },
       false
     );
@@ -115,7 +156,7 @@ export async function insertCustomer(newCustomer: CustomerList) {
     console.error('Error creating customer:', error);
     
     // Manejar errores específicos de duplicación
-    if ( error.error.statusCode === 409) {
+    if (error?.error?.statusCode === 409) {
       const errorData = error.error.message;
       console.log('Error de duplicación detectado:', errorData);
       if (errorData) {
@@ -127,8 +168,23 @@ export async function insertCustomer(newCustomer: CustomerList) {
         };
       }
     }
+
+    if (error?.error?.statusCode === 403) {
+      const errorData = error.error.message;
+      openSnackbar({ 
+        ...defaultSnackbar, 
+        message: errorData || 'No tienes permiso para crear clientes duplicados', 
+        alert: { ...defaultSnackbar.alert, color: 'error' } 
+      });
+
+      return {
+        success: false,
+        error: errorData || 'No tienes permiso para crear clientes duplicados',
+        type: error?.error?.type || 'FORBIDDEN'
+      };
+    }
     
-    const errorMessage = error.response?.data?.message || error.message || 'Error al crear el cliente';
+    const errorMessage = error?.error?.message || error.response?.data?.message || error.message || 'Error al crear el cliente';
     openSnackbar({ 
       ...defaultSnackbar, 
       message: errorMessage, 
@@ -149,13 +205,11 @@ export async function updateCustomer(customerId: number, updatedCustomer: Custom
     mutate(
       endpoints.key + endpoints.list,
       (currentCustomer: any) => {
-        const newCustomer: CustomerList[] = currentCustomer.customers.map((customer: CustomerList) =>
-          customer.Id === customerId ? { ...customer, ...updatedCustomer } : customer
+        const currentCustomers = getCachedCustomers(currentCustomer);
+        const newCustomer: CustomerList[] = currentCustomers.map((customer: CustomerList) =>
+          customer.Id === customerId ? { ...customer, ...updatedCustomer, Id: customerId } : customer
         );
-        return {
-          ...currentCustomer,
-          customers: newCustomer
-        };
+        return updateCustomerCache(currentCustomer, newCustomer);
       },
       false
     );
@@ -169,11 +223,12 @@ export async function updateCustomer(customerId: number, updatedCustomer: Custom
 }
 
 // Función para validar duplicación antes de crear/actualizar
-export async function validateCustomerDuplication(email: string, excludeCustomerId?: number) {
+export async function validateCustomerDuplication(email: string, excludeCustomerId?: number, supportSalesId?: number) {
   try {
     const response = await axiosServices.post('/api/Customer/validate-duplication', {
       email,
-      excludeCustomerId
+      excludeCustomerId,
+      supportSalesId
     }, {
       headers: {
         'Content-Type': 'application/json'
@@ -188,31 +243,48 @@ export async function validateCustomerDuplication(email: string, excludeCustomer
     console.error('Error validating customer duplication:', error);
     return {
       success: false,
-      error: error.response?.data?.message || error.message || 'Error al validar duplicación'
+      error: error?.error?.message || error.response?.data?.message || error.message || 'Error al validar duplicación'
     };
   }
 }
 
 export async function deleteCustomer(customerId: number) {
   try {
+    await axiosServices.delete(`/api/Customer/${customerId}`, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
     mutate(
       endpoints.key + endpoints.list,
       (currentCustomer: any) => {
-        const nonDeletedCustomer = currentCustomer.customers.filter((customer: CustomerList) => customer.Id !== customerId);
-        return {
-          ...currentCustomer,
-          customers: nonDeletedCustomer
-        };
+        const currentCustomers = getCachedCustomers(currentCustomer);
+        const nonDeletedCustomer = currentCustomers.filter(
+          (customer: CustomerList) => customer.Id !== customerId
+        );
+        return updateCustomerCache(currentCustomer, nonDeletedCustomer);
       },
       false
     );
-    // Aquí podrías hacer la petición real al backend si lo necesitas
+
     openSnackbar({ ...defaultSnackbar, message: 'Cliente eliminado exitosamente.', alert: { ...defaultSnackbar.alert, color: 'success' } });
     return { success: true };
   } catch (error: any) {
-    const errorMessage = error.response?.data?.message || error.message || 'Error al eliminar el cliente';
-    openSnackbar({ ...defaultSnackbar, message: errorMessage, alert: { ...defaultSnackbar.alert, color: 'error' } });
-    return { success: false, error: errorMessage };
+    const status = error?.response?.status;
+    const serverMessage =
+      error?.response?.data?.error?.message ||
+      error?.response?.data?.message ||
+      error?.message ||
+      'Error al eliminar el cliente';
+
+    const isConflict = status === 409;
+    openSnackbar({
+      ...defaultSnackbar,
+      message: serverMessage,
+      alert: { ...defaultSnackbar.alert, color: 'error' }
+    });
+    return { success: false, error: serverMessage, hasQuotations: isConflict };
   }
 }
 

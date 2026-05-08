@@ -81,7 +81,7 @@ function ReactTable({ data, columns, modalToggler, selectedAdvisor, onAdvisorCha
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState('');
-  const sortBy = { id: 'id', desc: false };
+  const sortBy = { id: 'Id', desc: false };
 
   const table = useReactTable({
     data: data,
@@ -101,7 +101,7 @@ function ReactTable({ data, columns, modalToggler, selectedAdvisor, onAdvisorCha
     getFilteredRowModel: getFilteredRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    debugTable: true
+    debugTable: false
   });
 
   let headers: LabelKeyObject[] = [];
@@ -264,6 +264,7 @@ export default function CustomerListPage() {
   const [customerModal, setCustomerModal] = useState<boolean>(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerList | null>(null);
   const [customerDeleteId, setCustomerDeleteId] = useState<any>('');
+  const [customerDeleteTitle, setCustomerDeleteTitle] = useState<string>('');
   
   // Estados para el modal de direcciones
   const [addressModalOpen, setAddressModalOpen] = useState<boolean>(false);
@@ -495,6 +496,11 @@ export default function CustomerListPage() {
                     e.stopPropagation();
                     handleClose();
                     setCustomerDeleteId(Number(row.original.Id));
+                    const displayName =
+                      row.original.Name ||
+                      [row.original.FirstName, row.original.LastName].filter(Boolean).join(' ') ||
+                      String(row.original.Id);
+                    setCustomerDeleteTitle(displayName);
                   }}
                 >
                   <Trash />
@@ -546,7 +552,7 @@ export default function CustomerListPage() {
           showAdvisorFilter
         }}
       />
-      <AlertCustomerDelete id={Number(customerDeleteId)} title={customerDeleteId} open={open} handleClose={handleClose} />
+      <AlertCustomerDelete id={Number(customerDeleteId)} title={customerDeleteTitle} open={open} handleClose={handleClose} />
       <CustomerModal open={customerModal} modalToggler={setCustomerModal} customer={selectedCustomer} />
       
       {/* Modal de direcciones */}

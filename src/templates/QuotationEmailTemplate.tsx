@@ -314,41 +314,41 @@ export const generateQuotationEmailHTML = ({
         <!-- Footer -->
         <div class="footer">
             <div class="company-info">
-                <h3>${companyInfo.name}</h3>
+                <h3>${quotation.Company?.Name || companyInfo.name}</h3>
                 
                 <div class="contact-info">
-                    ${companyInfo.phone ? `
+                    ${(quotation.Company?.Phones || companyInfo.phone) ? `
                     <div class="contact-item">
                         <span>📞</span>
-                        <span>${companyInfo.phone}</span>
+                        <span>${quotation.Company?.Phones || companyInfo.phone}</span>
                     </div>
                     ` : ''}
                     
-                    ${companyInfo.email ? `
+                    ${(quotation.Company?.Email || companyInfo.email) ? `
                     <div class="contact-item">
                         <span>✉️</span>
-                        <span>${companyInfo.email}</span>
+                        <span>${quotation.Company?.Email || companyInfo.email}</span>
                     </div>
                     ` : ''}
                     
-                    ${companyInfo.website ? `
+                    ${(quotation.Company?.WebPage || companyInfo.website) ? `
                     <div class="contact-item">
                         <span>🌐</span>
-                        <span>${companyInfo.website}</span>
+                        <span>${quotation.Company?.WebPage || companyInfo.website}</span>
                     </div>
                     ` : ''}
                 </div>
                 
-                ${companyInfo.address ? `
+                ${(quotation.Company?.Address || companyInfo.address) ? `
                 <div style="margin-bottom: 15px;">
-                    <span>📍</span> ${companyInfo.address}
+                    <span>📍</span> ${quotation.Company?.Address || companyInfo.address}
                 </div>
                 ` : ''}
             </div>
             
             <div class="disclaimer">
                 <p>Este correo electrónico contiene información confidencial. Si usted no es el destinatario previsto, por favor elimine este mensaje y notifique al remitente.</p>
-                <p style="margin-top: 10px;">© ${new Date().getFullYear()} ${companyInfo.name}. Todos los derechos reservados.</p>
+                <p style="margin-top: 10px;">© ${new Date().getFullYear()} ${quotation.Company?.Name || companyInfo.name}. Todos los derechos reservados.</p>
             </div>
         </div>
     </div>
@@ -393,10 +393,10 @@ Adjunto encontrará el documento PDF con el detalle completo.
 Si tiene alguna pregunta, no dude en contactarnos.
 
 Saludos cordiales,
-${companyInfo.name}
-${companyInfo.email}
-${companyInfo.phone}
-${companyInfo.website}
+${quotation.Company?.Name || companyInfo.name}
+${quotation.Company?.Email || companyInfo.email}
+${quotation.Company?.Phones || companyInfo.phone}
+${quotation.Company?.WebPage || companyInfo.website}
 `;
 };
 

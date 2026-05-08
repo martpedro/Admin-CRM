@@ -1,28 +1,21 @@
-import { useEffect, useState, ChangeEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import usePermissions from 'hooks/usePermissions';
 
 // material-ui
-import Autocomplete from '@mui/material/Autocomplete';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Divider from '@mui/material/Divider';
 import FormControl from '@mui/material/FormControl';
-import FormControlLabel from '@mui/material/FormControlLabel';
 import FormHelperText from '@mui/material/FormHelperText';
-import FormLabel from '@mui/material/FormLabel';
 import Grid from '@mui/material/Grid2';
 import InputLabel from '@mui/material/InputLabel';
 import ListItemText from '@mui/material/ListItemText';
 import MenuItem from '@mui/material/MenuItem';
 import OutlinedInput from '@mui/material/OutlinedInput';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
-import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
@@ -31,8 +24,6 @@ import Box from '@mui/material/Box';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3';
 
-// third-party
-import { merge } from 'lodash-es';
 import * as Yup from 'yup';
 import { useFormik, Form, FormikProvider } from 'formik';
 
@@ -40,63 +31,19 @@ import { useFormik, Form, FormikProvider } from 'formik';
 import AlertCustomerDelete from './AlertCustomerDelete';
 import IconButton from 'components/@extended/IconButton';
 import CircularWithPath from 'components/@extended/progress/CircularWithPath';
+import CustomerDuplicationAlert from './CustomerDuplicationAlert';
 
-import { insertCustomer, updateCustomer } from 'api/customer';
+import { insertCustomer, updateCustomer, validateCustomerDuplication } from 'api/customer';
 import { getSalesAdvisors } from 'api/user';
 import { openSnackbar } from 'api/snackbar';
-import { Gender } from 'config';
-import { ImagePath, getImageUrl } from 'utils/getImageUrl';
 import useAuth from 'hooks/useAuth';
 
 // assets
-import { Camera, CloseCircle, Trash } from 'iconsax-react';
+import { Trash } from 'iconsax-react';
 
 // types
 import { SnackbarProps } from 'types/snackbar';
 import { CustomerList } from 'types/customer';
-import { m } from 'framer-motion';
-
-const skills = [
-  'Adobe XD',
-  'After Effect',
-  'Angular',
-  'Animation',
-  'ASP.Net',
-  'Bootstrap',
-  'C#',
-  'CC',
-  'Corel Draw',
-  'CSS',
-  'DIV',
-  'Dreamweaver',
-  'Figma',
-  'Graphics',
-  'HTML',
-  'Illustrator',
-  'J2Ee',
-  'Java',
-  'Javascript',
-  'JQuery',
-  'Logo Design',
-  'Material UI',
-  'Motion',
-  'MVC',
-  'MySQL',
-  'NodeJS',
-  'npm',
-  'Photoshop',
-  'PHP',
-  'React',
-  'Redux',
-  'Reduxjs & tooltit',
-  'SASS',
-  'SCSS',
-  'SQL Server',
-  'SVG',
-  'UI/UX',
-  'User Interface Designing',
-  'Wordpress'
-];
 
 // CONSTANT
 const getInitialValues = (customer: CustomerList | null, currentUserId?: number) => {
@@ -147,10 +94,49 @@ const customerClassifications = [
 // ==============================|| CUSTOMER ADD / EDIT - FORM ||============================== //
 
 export default function FormCustomerAdd({ customer, closeModal }: { customer: CustomerList | null; closeModal: () => void }) {
+  type DuplicationValidationState = {
+    hasEmailDuplication: boolean;
+    hasDomainDuplication: boolean;
+    canProceed: boolean;
+    message?: string;
+    requiresDuplicatePermission?: boolean;
+    details?: {
+      emailDuplication?: {
+        customer: {
+          id: number;
+          name: string;
+          email: string;
+          assignedTo?: {
+            id: number;
+            name: string;
+            email: string;
+          } | null;
+        };
+      } | null;
+      domainDuplication?: {
+        domain: string;
+        count: number;
+        examples: Array<{
+          id: number;
+          name: string;
+          email: string;
+          assignedTo?: {
+            id: number;
+            name: string;
+            email: string;
+          } | null;
+        }>;
+      } | null;
+    };
+  };
+
   const { canCreate, canUpdate, canDelete } = usePermissions();
   const [loading, setLoading] = useState<boolean>(true);
   const [salesAdvisors, setSalesAdvisors] = useState<Array<{value: number, label: string, profile: string}>>([]);
   const [loadingAdvisors, setLoadingAdvisors] = useState<boolean>(false);
+  const [duplicationValidation, setDuplicationValidation] = useState<DuplicationValidationState | null>(null);
+  const [pendingCustomer, setPendingCustomer] = useState<CustomerList | null>(null);
+  const [isProceedingWithDuplicateDomain, setIsProceedingWithDuplicateDomain] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -198,6 +184,12 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
   const handleAlertClose = () => {
     setOpenAlert(!openAlert);
     closeModal();
+  };
+
+  const clearDuplicationValidation = () => {
+    setDuplicationValidation(null);
+    setPendingCustomer(null);
+    setIsProceedingWithDuplicateDomain(false);
   };
 
   const formik = useFormik({
@@ -257,31 +249,25 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
           }
         } else {
           // Crear nuevo cliente
+          const validationResult = await validateCustomerDuplication(
+            newCustomer.Email,
+            newCustomer.Id,
+            newCustomer.SupportSales?.Id
+          );
 
-          const result = await insertCustomer(newCustomer);
-          
-          if (result.success) {
-            openSnackbar({
-              open: true,
-              message: 'Cliente creado exitosamente.',
-              variant: 'alert',
-              alert: {
-                color: 'success'
-              }
-            } as SnackbarProps);
-            setSubmitting(false);
-            closeModal();
-          } else {
-            openSnackbar({
-              open: true,
-              message: result.error || 'Error al crear el cliente.',
-              variant: 'alert',
-              alert: {
-                color: 'error'
-              }
-            } as SnackbarProps);
-            setSubmitting(false);
+          if (validationResult.success && validationResult.data) {
+            const validationData = validationResult.data as DuplicationValidationState;
+
+            if (validationData.hasEmailDuplication || validationData.hasDomainDuplication) {
+              setDuplicationValidation(validationData);
+              setPendingCustomer(newCustomer);
+              setSubmitting(false);
+              return;
+            }
           }
+
+          await handleCreateCustomer(newCustomer);
+          setSubmitting(false);
         }
       } catch (error) {
         console.error('Error inesperado:', error);
@@ -298,7 +284,60 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
     }
   });
 
+  async function handleCreateCustomer(newCustomer: CustomerList) {
+    try {
+      setIsProceedingWithDuplicateDomain(true);
+
+      const result = await insertCustomer(newCustomer);
+
+      if (result.success) {
+        clearDuplicationValidation();
+
+        if (!result.warning) {
+          openSnackbar({
+            open: true,
+            message: 'Cliente creado exitosamente.',
+            variant: 'alert',
+            alert: {
+              color: 'success'
+            }
+          } as SnackbarProps);
+        }
+
+        closeModal();
+      } else {
+        openSnackbar({
+          open: true,
+          message: result.error || 'Error al crear el cliente.',
+          variant: 'alert',
+          alert: {
+            color: 'error'
+          }
+        } as SnackbarProps);
+      }
+    } finally {
+      setIsProceedingWithDuplicateDomain(false);
+    }
+  }
+
+  const handleProceedWithDuplicateDomain = async () => {
+    if (!pendingCustomer) {
+      return;
+    }
+
+    await handleCreateCustomer(pendingCustomer);
+  };
+
   const { errors, touched, handleSubmit, isSubmitting, getFieldProps, setFieldValue } = formik;
+  const safeSupportSalesValue = useMemo(() => {
+    const value = String(formik.values.supportSales ?? '');
+    if (!value) {
+      return '';
+    }
+
+    const existsInOptions = salesAdvisors.some((advisor) => String(advisor.value) === value);
+    return existsInOptions ? value : '';
+  }, [formik.values.supportSales, salesAdvisors]);
 
   // useEffect para establecer el usuario logueado como default cuando se cargan los asesores
   useEffect(() => {
@@ -311,7 +350,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
         setFieldValue('supportSales', currentUserId.toString());
       }
     }
-  }, [salesAdvisors, loadingAdvisors, customer, user?.id, setFieldValue]);
+  }, [salesAdvisors, loadingAdvisors, customer, user?.id, setFieldValue, formik.values.supportSales]);
 
   if (loading)
     return (
@@ -330,6 +369,20 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
             <DialogTitle>{customer ? 'Editar Cliente' : 'Nuevo Cliente'}</DialogTitle>
             <Divider />
             <DialogContent sx={{ p: 2.5 }}>
+              {duplicationValidation && (
+                <CustomerDuplicationAlert
+                  hasEmailDuplication={duplicationValidation.hasEmailDuplication}
+                  hasDomainDuplication={duplicationValidation.hasDomainDuplication}
+                  canProceed={duplicationValidation.canProceed}
+                  message={duplicationValidation.message}
+                  requiresDuplicatePermission={duplicationValidation.requiresDuplicatePermission}
+                  details={duplicationValidation.details}
+                  onClose={clearDuplicationValidation}
+                  onProceed={handleProceedWithDuplicateDomain}
+                  isProcessing={isProceedingWithDuplicateDomain}
+                />
+              )}
+
               <Grid container spacing={3}>
                 <Grid size={{  md: 1 }} >
                     </Grid>
@@ -383,7 +436,10 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                           id="customer-email"
                           placeholder="Ingrese el correo electrónico"
                           {...getFieldProps('email')}
-                          onChange={(e) => setFieldValue('email', e.target.value.trim())}
+                          onChange={(e) => {
+                            clearDuplicationValidation();
+                            setFieldValue('email', e.target.value.trim());
+                          }}
                           error={Boolean(touched.email && errors.email)}
                           helperText={touched.email && errors.email}
                         />
@@ -468,6 +524,7 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                             id="customer-supportSales"
                             displayEmpty
                             {...getFieldProps('supportSales')}
+                            value={safeSupportSalesValue}
                             onChange={(event: SelectChangeEvent<string>) => setFieldValue('supportSales', event.target.value as string)}
                             input={<OutlinedInput id="select-supportSales" placeholder="Seleccionar un asesor" />}
                             renderValue={(selected) => {
@@ -541,13 +598,13 @@ export default function FormCustomerAdd({ customer, closeModal }: { customer: Cu
                 </Grid>
                 <Grid>
                   <Stack direction="row" sx={{ gap: 2, alignItems: 'center' }}>
-                    <Button color="error" onClick={closeModal}>
+                    <Button color="error" onClick={closeModal} disabled={isSubmitting || isProceedingWithDuplicateDomain}>
                       Cancelar
                     </Button>
                     <Button
                       type="submit"
                       variant="contained"
-                      disabled={isSubmitting || (customer ? !canUpdate('customer') : !canCreate('customer'))}
+                      disabled={isSubmitting || isProceedingWithDuplicateDomain || (customer ? !canUpdate('customer') : !canCreate('customer'))}
                     >
                       {customer ? 'Editar' : 'Agregar'}
                     </Button>
